@@ -7,6 +7,8 @@ import {
 } from "@ant-design/icons";
 import type { Column, GenericRecord, StatusTone } from "./types";
 
+const mapImageUrl = `${import.meta.env.BASE_URL}assets/macau-operations-map.png`;
+
 export function Button({ children, variant = "default", icon, onClick, disabled, type = "button", className = "" }: {
   children: ReactNode; variant?: "primary" | "default" | "text" | "danger"; icon?: ReactNode;
   onClick?: () => void; disabled?: boolean; type?: "button" | "submit"; className?: string;
@@ -126,7 +128,7 @@ export function TreePanel({ title, nodes, active, onChange }: { title: string; n
 export function MapSplitView({ children, markers = true, toolbar = true, className = "" }: { children?: ReactNode; markers?: boolean; toolbar?: boolean; className?: string }) {
   return <div className={`map-split ${className}`}>
     <div className="map-canvas" aria-label="澳門營運地圖">
-      <img src="/assets/macau-operations-map.png" alt="澳門營運地圖底圖" />
+      <img src={mapImageUrl} alt="澳門營運地圖底圖" />
       {toolbar && <div className="map-tools"><button><PlusOutlined /></button><button>−</button><button><EnvironmentFilled /></button></div>}
       <div className="map-legend"><span><i className="legend-dot done" />已完成</span><span><i className="legend-dot active" />進行中</span><span><i className="legend-dot issue" />異常</span></div>
       {markers && <>
@@ -200,4 +202,3 @@ export function GenericEditor({ record, onSave }: { record?: GenericRecord; onSa
     <button type="submit" className="sr-only">儲存</button>
   </form>;
 }
-
