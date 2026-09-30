@@ -6,3 +6,8 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Local design specification
+詳細設計.md
+AGENTS.md
+.openai
