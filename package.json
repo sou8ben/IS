@@ -1,0 +1,27 @@
+{
+  "name": "prototype",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "test:sites": "node --test tests/sites-worker.test.mjs"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "@vitejs/plugin-react": "5.0.4",
+    "react-router-dom": "^7.9.6",
+    "recharts": "^3.5.1",
+    "vite": "6.4.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "typescript": "^5.9.3"
+  }
+}
