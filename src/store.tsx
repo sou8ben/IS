@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { initialState } from "./data";
 import type { DemoState, EventRecord, Notice, Plan, Work, WorkStatus } from "./types";
 
-const STORAGE_KEY = "iam-demo-state-v1";
+export const STORAGE_KEY = "iam-demo-state-v1";
 
 interface DemoContextValue extends DemoState {
   updateWorkStatus: (id: string, status: WorkStatus) => void;
@@ -10,6 +10,9 @@ interface DemoContextValue extends DemoState {
   addWork: (work: Work) => void;
   addEvent: (event: EventRecord) => void;
   addPlan: (plan: Plan) => void;
+  updatePlan: (id: string, patch: Partial<Plan>) => void;
+  updateEvent: (id: string, patch: Partial<EventRecord>) => void;
+  addNotice: (notice: Notice) => void;
   markNoticeRead: (id: string) => void;
   markAllRead: () => void;
   resetDemo: () => void;
@@ -33,6 +36,12 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  useEffect(() => {
+    const sync = (event: StorageEvent) => { if (event.key === STORAGE_KEY) setState(loadState()); };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
+
   const value = useMemo<DemoContextValue>(() => ({
     ...state,
     updateWorkStatus: (id, status) => setState((current) => ({
@@ -46,6 +55,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     addWork: (work) => setState((current) => ({ ...current, works: [work, ...current.works] })),
     addEvent: (event) => setState((current) => ({ ...current, events: [event, ...current.events] })),
     addPlan: (plan) => setState((current) => ({ ...current, plans: [plan, ...current.plans] })),
+    updatePlan: (id, patch) => setState((current) => ({ ...current, plans: current.plans.map((plan) => plan.id === id ? { ...plan, ...patch } : plan) })),
+    updateEvent: (id, patch) => setState((current) => ({ ...current, events: current.events.map((event) => event.id === id ? { ...event, ...patch } : event) })),
+    addNotice: (notice) => setState((current) => ({ ...current, notices: [notice, ...current.notices] })),
     markNoticeRead: (id) => setState((current) => ({ ...current, notices: current.notices.map((notice: Notice) => notice.id === id ? { ...notice, read: true } : notice) })),
     markAllRead: () => setState((current) => ({ ...current, notices: current.notices.map((notice) => ({ ...notice, read: true })) })),
     resetDemo: () => setState(initialState),

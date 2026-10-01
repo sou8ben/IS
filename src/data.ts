@@ -3,6 +3,7 @@ import type { DemoState, GenericRecord } from "./types";
 export const initialState: DemoState = {
   works: [
     { id: "WK-20260929-0012", title: "公園座椅固定螺絲鬆脫", type: "公共設施／座椅", source: "巡查", priority: "緊急", status: "跟進中", group: "公園設施維護組", grid: "花地瑪堂北區", address: "黑沙環公園近兒童遊樂區", sla: "將逾時", createdAt: "2026-09-29 09:18", updatedAt: "2026-09-29 11:42", eventId: "EV-20260929-0006", planId: "PL-20260929-0003", description: "巡查人員發現座椅左側兩枚固定螺絲鬆脫，存在傾倒風險。" },
+    { id: "WK-20260929-0010", title: "海濱座椅扶手鬆動", type: "公共設施／座椅", source: "事件", priority: "一般", status: "新建", group: "公園設施維護組", grid: "花地瑪堂北區", address: "黑沙環海濱座椅區 A 段", sla: "正常", createdAt: "2026-09-29 07:55", updatedAt: "2026-09-29 07:55", description: "市民反映海濱座椅扶手鬆動，需檢查固定件。" },
     { id: "WK-20260929-0011", title: "行人道樹枝阻礙通行", type: "綠化／樹木", source: "事件", priority: "一般", status: "新建", group: "綠化養護組", grid: "望德堂中區", address: "美副將大馬路 42 號前", sla: "正常", createdAt: "2026-09-29 08:42", updatedAt: "2026-09-29 08:42", eventId: "EV-20260929-0005", description: "樹枝下垂至行人高度，需安排修剪。" },
     { id: "WK-20260928-0096", title: "垃圾收集點圍板破損", type: "環境衛生／收集設施", source: "獨立", priority: "特急", status: "已解決", group: "環境衛生執行組", grid: "大堂南區", address: "新馬路近議事亭前地", sla: "已逾時", createdAt: "2026-09-28 14:10", updatedAt: "2026-09-29 10:12", description: "圍板尖角外露，已完成臨時加固，待驗收關閉。" },
     { id: "WK-20260928-0081", title: "花圃灌溉水管滲漏", type: "綠化／灌溉", source: "巡查", priority: "一般", status: "已關閉", group: "綠化養護組", grid: "氹仔中央區", address: "嘉模公園北側花圃", sla: "正常", createdAt: "2026-09-28 10:05", updatedAt: "2026-09-28 17:36", planId: "PL-20260928-0018", description: "水管接駁位滲漏，已更換接頭並測試。" },
@@ -10,6 +11,8 @@ export const initialState: DemoState = {
   ],
   plans: [
     { id: "PL-20260929-0003", name: "黑沙環公園設施日常巡查", template: "公園設施巡查路線 A", group: "北區巡查一組", status: "進行中", startAt: "2026-09-29 08:30", endAt: "2026-09-29 12:30", progress: 7, total: 12, executor: "陳家朗", grid: "花地瑪堂北區" },
+    { id: "PL-20260929-0005", name: "黑沙環海濱休憩區巡查", template: "海濱休憩區路線", group: "北區巡查一組", status: "未開始", startAt: "2026-09-29 15:00", endAt: "2026-09-29 17:00", progress: 0, total: 5, grid: "花地瑪堂北區" },
+    { id: "PL-20260929-0006", name: "筷子基街道設施巡查", template: "筷子基步行路線", group: "北區巡查一組", status: "未開始", startAt: "2026-09-29 16:00", endAt: "2026-09-29 18:00", progress: 0, total: 4, grid: "花地瑪堂西區" },
     { id: "PL-20260929-0004", name: "中區街道環境巡查", template: "中區步行路線", group: "中區巡查組", status: "未開始", startAt: "2026-09-29 14:00", endAt: "2026-09-29 18:00", progress: 0, total: 18, grid: "大堂中區" },
     { id: "PL-20260928-0018", name: "氹仔公園設施巡查", template: "氹仔綜合路線", group: "離島巡查組", status: "已完成", startAt: "2026-09-28 09:00", endAt: "2026-09-28 13:00", progress: 15, total: 15, executor: "李芷晴", grid: "氹仔中央區" },
     { id: "PL-20260927-0012", name: "路環步道巡查", template: "路環山徑路線", group: "離島巡查組", status: "已中止", startAt: "2026-09-27 08:00", endAt: "2026-09-27 12:00", progress: 3, total: 9, grid: "路環東區" },

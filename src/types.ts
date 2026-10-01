@@ -20,6 +20,16 @@ export interface Work {
   planId?: string;
   description: string;
   voided?: boolean;
+  creator?: string;
+  handler?: string;
+  reopenCount?: number;
+  objectId?: string;
+  inspectionId?: string;
+  inspectionItem?: string;
+  dupGroup?: string;
+  pendingSync?: boolean;
+  x?: number;
+  y?: number;
 }
 
 export interface Plan {
@@ -46,6 +56,12 @@ export interface EventRecord {
   createdAt: string;
   planId?: string;
   workIds: string[];
+  followAt?: string;
+  custom?: Record<string, string>;
+  creator?: string;
+  pendingSync?: boolean;
+  x?: number;
+  y?: number;
 }
 
 export interface Notice {

@@ -93,7 +93,7 @@ export function GenericListPage({ title, description, dataset, eyebrow, tree, ed
 export function WorkListPage() {
   const { works } = useDemo(); const navigate = useNavigate();
   const [search, setSearch] = useState(""); const [status, setStatus] = useState("全部狀態"); const [sla, setSla] = useState("全部 SLA"); const [selected, setSelected] = useState<string[]>([]);
-  const rows = works.filter((work) => (!search || `${work.id}${work.title}${work.address}`.toLowerCase().includes(search.toLowerCase())) && (status === "全部狀態" || work.status === status) && (sla === "全部 SLA" || work.sla === sla));
+  const rows = works.filter((work) => !work.pendingSync && (!search || `${work.id}${work.title}${work.address}`.toLowerCase().includes(search.toLowerCase())) && (status === "全部狀態" || work.status === status) && (sla === "全部 SLA" || work.sla === sla));
   const columns: Column<Work>[] = [
     { key: "id", title: "工作編號", width: 166, sortable: true, render: (work) => <a>{work.id}</a> },
     { key: "title", title: "工作摘要", width: 260, render: (work) => <div className="cell-main"><strong>{work.title}</strong><span>{work.address}</span></div> },
@@ -200,7 +200,7 @@ export function InspectionDetailPage() {
 
 export function EventListPage() {
   const { events } = useDemo(); const navigate = useNavigate(); const [search, setSearch] = useState(""); const [status, setStatus] = useState("全部狀態");
-  const rows = events.filter((event) => (!search || `${event.id}${event.description}${event.address}`.includes(search)) && (status === "全部狀態" || event.status === status));
+  const rows = events.filter((event) => !event.pendingSync && (!search || `${event.id}${event.description}${event.address}`.includes(search)) && (status === "全部狀態" || event.status === status));
   const columns: Column<EventRecord>[] = [{ key: "id", title: "事件編號", width: 168, render: (event) => <a>{event.id}</a> }, { key: "description", title: "事件描述", width: 280 }, { key: "type", title: "事件類型", width: 190 }, { key: "status", title: "跟進狀態", width: 112, render: (event) => <StatusTag>{event.status}</StatusTag> }, { key: "grid", title: "網格", width: 150 }, { key: "createdAt", title: "建立時間", width: 170 }, { key: "workIds", title: "關聯工作", width: 100, render: (event) => event.workIds.length }];
   return <div className="page-content"><PageHeader title="事件管理" description="登記事件及其跟進狀態，並關聯後續處理工作" actions={<><Button icon={<EnvironmentOutlined />}>地圖視圖</Button><Button variant="primary" icon={<PlusOutlined />} onClick={() => navigate("/events/new")}>新增事件</Button></>} /><section className="panel list-panel"><FilterBar search={search} onSearch={setSearch} onReset={() => { setSearch(""); setStatus("全部狀態"); }}><Select value={status} onChange={setStatus}><option>全部狀態</option><option>無需跟進</option><option>跟進中</option><option>已完成</option></Select></FilterBar><DenseTable rows={rows} columns={columns} onRowClick={(event) => navigate(`/events/${event.id}`)} /><Pagination total={rows.length} /></section></div>;
 }

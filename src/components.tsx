@@ -16,7 +16,7 @@ export function Button({ children, variant = "default", icon, onClick, disabled,
   return <button className={`btn btn-${variant} ${className}`} onClick={onClick} disabled={disabled} type={type}>{icon}<span>{children}</span></button>;
 }
 
-const toneMap: Record<string, StatusTone> = {
+export const toneMap: Record<string, StatusTone> = {
   "啟用": "success", "已完成": "success", "已關閉": "success", "已解決": "info", "正常": "success", "已發佈": "success",
   "進行中": "info", "跟進中": "info", "將逾時": "warning", "未開始": "neutral", "新建": "neutral", "無需跟進": "neutral",
   "已逾時": "danger", "特急": "danger", "緊急": "warning", "停用": "neutral", "已中止": "warning", "待人工分派": "danger",

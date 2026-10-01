@@ -13,11 +13,13 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@vitejs/plugin-react": "5.0.4",
+    "antd-mobile": "^5.43.0",
+    "antd-mobile-icons": "^0.3.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
     "react-router-dom": "^7.9.6",
     "recharts": "^3.5.1",
-    "vite": "6.4.2",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "vite": "6.4.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",
