@@ -4,7 +4,7 @@ import {
   AppstoreOutlined, ArrowLeftOutlined, BarChartOutlined, BellOutlined, CheckOutlined,
   ClockCircleOutlined, CloseCircleOutlined, CloudUploadOutlined, DeleteOutlined,
   EditOutlined, EnvironmentOutlined, ExclamationCircleFilled, ExportOutlined,
-  FileDoneOutlined, FileSearchOutlined, FilterOutlined, FormOutlined, ImportOutlined,
+  FileDoneOutlined, FileSearchOutlined, FormOutlined, ImportOutlined,
   LockOutlined, PaperClipOutlined, PlusOutlined, ReloadOutlined, SafetyCertificateOutlined, SendOutlined,
   SettingOutlined, SwapOutlined, TeamOutlined, ThunderboltOutlined, ToolOutlined,
   UserOutlined, WarningFilled,
@@ -12,11 +12,13 @@ import {
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { genericDatasets, makeRecords, reportTrend } from "./data";
 import { useDemo } from "./store";
-import type { Column, EventRecord, GenericRecord, Plan, Work, WorkStatus } from "./types";
+import { usePermissionRules } from "./permission-store";
+import { workPolicyObject } from "./permission-rules";
+import type { Column, EventRecord, GenericRecord, Work, WorkStatus } from "./types";
 import {
   ActivityTimeline, AttachmentViewer, Button, ConfirmDialog, DenseTable, Field, FilterBar,
-  FormDrawer, GenericEditor, ImportWizard, MapSplitView, PageHeader, Pagination, RuleBuilder,
-  Select, StatusTag, TreePanel, useToast,
+  FormDrawer, GenericEditor, GroupEditor, ImportWizard, MapSplitView, PageHeader, Pagination, RuleBuilder,
+  RoleEditor, Select, StatusTag, TreePanel, UserEditor, useToast,
 } from "./components";
 
 const kpiData = [
@@ -54,37 +56,156 @@ export function WorkbenchPage() {
 
 interface GenericListPageProps { title: string; description: string; dataset: keyof typeof genericDatasets; eyebrow?: string; tree?: string[]; editor?: "generic" | "rule"; primaryLabel?: string; }
 
+interface UserFilterValues {
+  name: string;
+  login: string;
+  mobile: string;
+  phone: string;
+  email: string;
+  euid: string;
+  municipal: "" | "是" | "否";
+  status: "" | "生效" | "失效";
+}
+
+interface GroupFilterValues { code: string; name: string; owner: string; }
+interface RoleFilterValues { code: string; name: string; status: "" | "生效" | "失效"; }
+
+const emptyUserFilters: UserFilterValues = {
+  name: "", login: "", mobile: "", phone: "", email: "", euid: "", municipal: "", status: "",
+};
+
+const emptyGroupFilters: GroupFilterValues = { code: "", name: "", owner: "" };
+const emptyRoleFilters: RoleFilterValues = { code: "", name: "", status: "" };
+
+interface UserDirectoryRecord extends Omit<UserFilterValues, "name" | "status"> {
+  locked: "是" | "否";
+  otpCount: number;
+  updater: string;
+}
+
+const userDirectory: Record<string, UserDirectoryRecord> = {
+  "USR-001": { login: "chan.kalong", mobile: "6612 4830", phone: "8399 2101", email: "kalong.chan@iam.gov.mo", euid: "EUID-100184", municipal: "是", locked: "否", otpCount: 1, updater: "系統管理員" },
+  "USR-002": { login: "lei.chicheng", mobile: "6684 1027", phone: "8399 2108", email: "chicheng.lei@iam.gov.mo", euid: "EUID-100207", municipal: "是", locked: "否", otpCount: 0, updater: "陳家朗" },
+  "USR-003": { login: "leong.kaman", mobile: "6231 7742", phone: "8399 2246", email: "kaman.leong@iam.gov.mo", euid: "EUID-100231", municipal: "是", locked: "否", otpCount: 2, updater: "系統管理員" },
+  "USR-004": { login: "wong.chifong", mobile: "6655 9318", phone: "8399 2380", email: "chifong.wong@iam.gov.mo", euid: "EUID-100259", municipal: "是", locked: "是", otpCount: 5, updater: "陳家朗" },
+  "USR-005": { login: "ho.houran", mobile: "6218 4459", phone: "2872 9014", email: "houran.ho@vendor.mo", euid: "EUID-200041", municipal: "否", locked: "否", otpCount: 1, updater: "黃志峰" },
+  "USR-006": { login: "au.wingsan", mobile: "6688 3041", phone: "2872 9032", email: "wingsan.au@vendor.mo", euid: "EUID-200058", municipal: "否", locked: "是", otpCount: 3, updater: "系統管理員" },
+};
+
 export function GenericListPage({ title, description, dataset, eyebrow, tree, editor = "generic", primaryLabel = "新增" }: GenericListPageProps) {
   const source = genericDatasets[dataset];
   const [records, setRecords] = useState(source);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("全部狀態");
+  const [userFilters, setUserFilters] = useState<UserFilterValues>(emptyUserFilters);
+  const [groupFilters, setGroupFilters] = useState<GroupFilterValues>(emptyGroupFilters);
+  const [roleFilters, setRoleFilters] = useState<RoleFilterValues>(emptyRoleFilters);
   const [selected, setSelected] = useState<string[]>([]);
   const [activeTree, setActiveTree] = useState(tree?.[0] ?? "");
   const [editing, setEditing] = useState<GenericRecord | null | undefined>();
   const [confirm, setConfirm] = useState(false);
   const { showToast } = useToast();
-  const rows = records.filter((record) => (!search || `${record.name}${record.code}${record.owner}`.toLowerCase().includes(search.toLowerCase())) && (status === "全部狀態" || record.status === status));
-  const columns: Column<GenericRecord>[] = [
+  const rows = records.filter((record) => {
+    if (dataset === "groups") return (!groupFilters.code || record.code.toLowerCase().includes(groupFilters.code.trim().toLowerCase())) && (!groupFilters.name || record.name.toLowerCase().includes(groupFilters.name.trim().toLowerCase())) && (!groupFilters.owner || record.owner === groupFilters.owner);
+    if (dataset === "roles") {
+      const roleStatus = record.status === "啟用" ? "生效" : "失效";
+      return (!roleFilters.code || record.code.toLowerCase().includes(roleFilters.code.trim().toLowerCase()))
+        && (!roleFilters.name || record.name.toLowerCase().includes(roleFilters.name.trim().toLowerCase()))
+        && (!roleFilters.status || roleStatus === roleFilters.status);
+    }
+    if (dataset !== "users") return (!search || `${record.name}${record.code}${record.owner}`.toLowerCase().includes(search.toLowerCase())) && (status === "全部狀態" || record.status === status);
+    const detail = userDirectory[record.id];
+    const contains = (value: string, query: string) => !query || value.toLowerCase().includes(query.trim().toLowerCase());
+    const displayStatus = record.status === "啟用" ? "生效" : "失效";
+    return !!detail
+      && contains(record.name, userFilters.name)
+      && contains(detail.login, userFilters.login)
+      && contains(detail.mobile, userFilters.mobile)
+      && contains(detail.phone, userFilters.phone)
+      && contains(detail.email, userFilters.email)
+      && contains(detail.euid, userFilters.euid)
+      && (!userFilters.municipal || detail.municipal === userFilters.municipal)
+      && (!userFilters.status || displayStatus === userFilters.status);
+  });
+  const genericColumns: Column<GenericRecord>[] = [
     { key: "code", title: "編號", width: 138, sortable: true, render: (record) => <a>{record.code}</a> },
     { key: "name", title: "名稱", sortable: true }, { key: "category", title: "類別", width: 145 },
     { key: "owner", title: "負責部門", width: 160 }, { key: "count", title: "關聯數", width: 90 },
     { key: "updatedAt", title: "最後修改", width: 170, sortable: true }, { key: "status", title: "狀態", width: 90, render: (record) => <StatusTag>{record.status}</StatusTag> },
   ];
+  const userColumns: Column<GenericRecord>[] = [
+    { key: "name", title: "用戶姓名", width: 120, sortable: true },
+    { key: "login", title: "登入帳號", width: 135, sortable: true, sortValue: (record) => userDirectory[record.id]?.login ?? "", render: (record) => userDirectory[record.id]?.login ?? "—" },
+    { key: "mobile", title: "手機電話", width: 115, sortable: true, sortValue: (record) => userDirectory[record.id]?.mobile ?? "", render: (record) => userDirectory[record.id]?.mobile ?? "—" },
+    { key: "phone", title: "聯絡電話", width: 115, sortable: true, sortValue: (record) => userDirectory[record.id]?.phone ?? "", render: (record) => userDirectory[record.id]?.phone ?? "—" },
+    { key: "email", title: "電郵地址", width: 225, sortable: true, sortValue: (record) => userDirectory[record.id]?.email ?? "", render: (record) => userDirectory[record.id]?.email ?? "—" },
+    { key: "euid", title: "EUID", width: 125, sortable: true, sortValue: (record) => userDirectory[record.id]?.euid ?? "", render: (record) => userDirectory[record.id]?.euid ?? "—" },
+    { key: "municipal", title: "市政署用戶", width: 105, sortable: true, sortValue: (record) => userDirectory[record.id]?.municipal ?? "", render: (record) => userDirectory[record.id]?.municipal ?? "—" },
+    { key: "status", title: "狀態", width: 85, sortable: true, sortValue: (record) => record.status === "啟用" ? "生效" : "失效", render: (record) => <StatusTag tone={record.status === "啟用" ? "success" : "neutral"}>{record.status === "啟用" ? "生效" : "失效"}</StatusTag> },
+    { key: "locked", title: "鎖定", width: 75, sortable: true, sortValue: (record) => userDirectory[record.id]?.locked ?? "", render: (record) => <StatusTag tone={userDirectory[record.id]?.locked === "是" ? "danger" : "neutral"}>{userDirectory[record.id]?.locked ?? "—"}</StatusTag> },
+    { key: "otpCount", title: "獲取驗證碼次數", width: 130, sortable: true, sortValue: (record) => userDirectory[record.id]?.otpCount ?? 0, render: (record) => userDirectory[record.id]?.otpCount ?? "—" },
+    { key: "updater", title: "更新人", width: 115, sortable: true, sortValue: (record) => userDirectory[record.id]?.updater ?? "", render: (record) => userDirectory[record.id]?.updater ?? "—" },
+    { key: "updatedAt", title: "更新時間", width: 165, sortable: true },
+  ];
+  const groupColumns: Column<GenericRecord>[] = [
+    { key: "code", title: "編號", width: 138, sortable: true, render: (record) => <a>{record.code}</a> },
+    { key: "name", title: "名稱", width: 230, sortable: true },
+    { key: "owner", title: "附屬部門", width: 180, sortable: true },
+    { key: "count", title: "關聯用戶數", width: 120, sortable: true },
+    { key: "updatedAt", title: "最後修改", width: 170, sortable: true },
+    { key: "status", title: "狀態", width: 90, sortable: true, render: (record) => <StatusTag>{record.status}</StatusTag> },
+  ];
+  const roleColumns: Column<GenericRecord>[] = [
+    { key: "code", title: "編號", width: 138, sortable: true, render: (record) => <a>{record.code}</a> },
+    { key: "name", title: "名稱", width: 230, sortable: true },
+    { key: "level", title: "層級", width: 130, sortable: true, sortValue: (record) => record.level ?? "—", render: (record) => record.level ?? "—" },
+    { key: "roleType", title: "角色類型", width: 145, sortable: true, sortValue: (record) => record.roleType ?? "", render: (record) => record.roleType ?? "普通用戶" },
+    { key: "status", title: "狀態", width: 95, sortable: true, sortValue: (record) => record.status === "啟用" ? "生效" : "失效", render: (record) => <StatusTag tone={record.status === "啟用" ? "success" : "neutral"}>{record.status === "啟用" ? "生效" : "失效"}</StatusTag> },
+  ];
+  const columns = dataset === "users" ? userColumns : dataset === "groups" ? groupColumns : dataset === "roles" ? roleColumns : genericColumns;
   const save = () => { setEditing(undefined); showToast(editing ? "變更已儲存" : "記錄已建立"); };
   const disableSelected = () => { setRecords(records.map((record) => selected.includes(record.id) ? { ...record, status: "停用" } : record)); setConfirm(false); setSelected([]); showToast("所選記錄已停用"); };
   return <div className="page-content">
     <PageHeader title={title} description={description} eyebrow={eyebrow} actions={<><Button icon={<CloudUploadOutlined />}>匯入</Button><Button icon={<ExportOutlined />}>匯出</Button><Button variant="primary" icon={<PlusOutlined />} onClick={() => setEditing(null)}>{primaryLabel}</Button></>} />
-    <div className={tree ? "tree-layout" : ""}>{tree && <TreePanel title="分類" nodes={tree} active={activeTree} onChange={setActiveTree} />}
-      <section className="panel list-panel">
-        <FilterBar search={search} onSearch={setSearch} onReset={() => { setSearch(""); setStatus("全部狀態"); }} onAdvanced={() => showToast("已展開高級篩選條件")}><Select value={status} onChange={setStatus}><option>全部狀態</option><option>啟用</option><option>停用</option></Select>{activeTree && <span className="filter-chip">{activeTree}</span>}</FilterBar>
-        {selected.length > 0 && <div className="batch-bar"><strong>已選 {selected.length} 筆</strong><Button icon={<EditOutlined />}>批量編輯</Button><Button variant="danger" icon={<DeleteOutlined />} onClick={() => setConfirm(true)}>停用所選</Button></div>}
-        <DenseTable rows={rows} columns={columns} selected={selected} onSelected={setSelected} onRowClick={setEditing} />
+    <div className={tree ? "tree-layout tree-page-layout" : dataset === "users" ? "user-page-layout" : "page-body-layout"}>{tree && <TreePanel title={dataset === "groups" ? "群組分類" : "分類"} nodes={tree} active={activeTree} onChange={setActiveTree} />}
+      <section className={`panel list-panel ${dataset === "users" ? "user-list-panel" : dataset === "groups" ? "group-list-panel" : ""}`}>
+        {dataset === "users" ? <div className="filter-bar user-filter-bar">
+          <label className="filter-field"><span>用戶名稱</span><input aria-label="用戶名稱" value={userFilters.name} onChange={(event) => setUserFilters({ ...userFilters, name: event.target.value })} placeholder="請輸入用戶名稱" /></label>
+          <label className="filter-field"><span>登入帳號</span><input aria-label="登入帳號" value={userFilters.login} onChange={(event) => setUserFilters({ ...userFilters, login: event.target.value })} placeholder="請輸入登入帳號" /></label>
+          <label className="filter-field"><span>手機電話</span><input aria-label="手機電話" value={userFilters.mobile} onChange={(event) => setUserFilters({ ...userFilters, mobile: event.target.value })} placeholder="請輸入手機電話" /></label>
+          <label className="filter-field"><span>聯絡電話</span><input aria-label="聯絡電話" value={userFilters.phone} onChange={(event) => setUserFilters({ ...userFilters, phone: event.target.value })} placeholder="請輸入聯絡電話" /></label>
+          <label className="filter-field"><span>電郵地址</span><input aria-label="電郵地址" value={userFilters.email} onChange={(event) => setUserFilters({ ...userFilters, email: event.target.value })} placeholder="請輸入電郵地址" /></label>
+          <label className="filter-field"><span>EUID</span><input aria-label="EUID" value={userFilters.euid} onChange={(event) => setUserFilters({ ...userFilters, euid: event.target.value })} placeholder="請輸入 EUID" /></label>
+          <label className="filter-field"><span>市政署用戶</span><Select ariaLabel="市政署用戶" value={userFilters.municipal} onChange={(value) => setUserFilters({ ...userFilters, municipal: value as UserFilterValues["municipal"] })}><option value="">全部</option><option>是</option><option>否</option></Select></label>
+          <label className="filter-field"><span>狀態</span><Select ariaLabel="狀態" value={userFilters.status} onChange={(value) => setUserFilters({ ...userFilters, status: value as UserFilterValues["status"] })}><option value="">全部</option><option>生效</option><option>失效</option></Select></label>
+          <div className="user-filter-actions"><Button variant="text" icon={<ReloadOutlined />} onClick={() => setUserFilters(emptyUserFilters)}>重設</Button></div>
+        </div> : dataset === "groups" ? <div className="filter-bar group-filter-bar">
+          <label className="filter-field"><span>編號</span><input aria-label="編號" value={groupFilters.code} onChange={(event) => setGroupFilters({ ...groupFilters, code: event.target.value })} placeholder="請輸入編號" /></label>
+          <label className="filter-field"><span>名稱</span><input aria-label="名稱" value={groupFilters.name} onChange={(event) => setGroupFilters({ ...groupFilters, name: event.target.value })} placeholder="請輸入名稱" /></label>
+          <label className="filter-field"><span>附屬部門</span><Select ariaLabel="附屬部門" value={groupFilters.owner} onChange={(value) => setGroupFilters({ ...groupFilters, owner: value })}><option value="">全部附屬部門</option><option>市政管理廳</option><option>環境衛生處</option><option>園林綠化處</option><option>資訊處</option></Select></label>
+          <div className="user-filter-actions"><Button variant="text" icon={<ReloadOutlined />} onClick={() => setGroupFilters(emptyGroupFilters)}>重設</Button></div>
+        </div> : dataset === "roles" ? <div className="filter-bar role-filter-bar">
+          <label className="filter-field"><span>編號</span><input aria-label="編號" value={roleFilters.code} onChange={(event) => setRoleFilters({ ...roleFilters, code: event.target.value })} placeholder="請輸入編號" /></label>
+          <label className="filter-field"><span>名稱</span><input aria-label="名稱" value={roleFilters.name} onChange={(event) => setRoleFilters({ ...roleFilters, name: event.target.value })} placeholder="請輸入名稱" /></label>
+          <label className="filter-field"><span>狀態</span><Select ariaLabel="狀態" value={roleFilters.status} onChange={(value) => setRoleFilters({ ...roleFilters, status: value as RoleFilterValues["status"] })}><option value="">全部狀態</option><option>生效</option><option>失效</option></Select></label>
+          <div className="user-filter-actions"><Button variant="text" icon={<ReloadOutlined />} onClick={() => setRoleFilters(emptyRoleFilters)}>重設</Button></div>
+        </div> : <FilterBar search={search} onSearch={setSearch} onReset={() => { setSearch(""); setStatus("全部狀態"); }} onAdvanced={() => showToast("已展開高級篩選條件")}><Select value={status} onChange={setStatus}><option>全部狀態</option><option>啟用</option><option>停用</option></Select>{activeTree && <span className="filter-chip">{activeTree}</span>}</FilterBar>}
+        {dataset !== "users" && dataset !== "groups" && dataset !== "roles" && selected.length > 0 && <div className="batch-bar"><strong>已選 {selected.length} 筆</strong><Button icon={<EditOutlined />}>批量編輯</Button><Button variant="danger" icon={<DeleteOutlined />} onClick={() => setConfirm(true)}>停用所選</Button></div>}
+        <DenseTable
+          rows={rows}
+          columns={columns}
+          selected={dataset === "users" || dataset === "groups" || dataset === "roles" ? undefined : selected}
+          onSelected={dataset === "users" || dataset === "groups" || dataset === "roles" ? undefined : setSelected}
+          onRowClick={dataset === "users" || dataset === "groups" || dataset === "roles" ? undefined : setEditing}
+          actionTitle={dataset === "users" || dataset === "groups" || dataset === "roles" ? "操作" : ""}
+          stickyActions={dataset === "users" || dataset === "groups" || dataset === "roles"}
+          renderActions={dataset === "users" || dataset === "groups" || dataset === "roles" ? (record) => <button className="table-action-button" aria-label={`編輯 ${record.name}`} onClick={() => setEditing(record)}><EditOutlined />編輯</button> : undefined}
+        />
         <Pagination total={rows.length} />
       </section>
     </div>
-    <FormDrawer open={editing !== undefined} title={editing ? `編輯${title.replace("管理", "")}` : `新增${title.replace("管理", "")}`} subtitle={editing?.code} onClose={() => setEditing(undefined)} onSubmit={save}>
-      {editor === "rule" ? <><div className="form-grid"><Field label="規則名稱" required><input defaultValue={editing?.name} /></Field><Field label="適用權限點" required><Select value="關閉工作" onChange={() => undefined}><option>關閉工作</option><option>作廢記錄</option></Select></Field></div><RuleBuilder/><Field label="拒絕提示語" required><input defaultValue="您目前的群組身份不允許執行此操作" /></Field><div className="test-result"><SafetyCertificateOutlined /><div><strong>試算通過</strong><span>測試用戶「陳家朗」符合目前條件</span></div></div></> : <GenericEditor record={editing ?? undefined} onSave={save} />}
+    <FormDrawer open={editing !== undefined} title={editing ? `編輯${title.replace("管理", "")}` : `新增${title.replace("管理", "")}`} subtitle={editing?.code} onClose={() => setEditing(undefined)} onSubmit={save} className={dataset === "users" ? "user-editor-drawer" : dataset === "groups" ? "group-editor-drawer" : dataset === "roles" ? "role-editor-drawer" : ""}>
+      {editor === "rule" ? <><div className="form-grid"><Field label="規則名稱" required><input defaultValue={editing?.name} /></Field><Field label="適用權限點" required><Select value="關閉工作" onChange={() => undefined}><option>關閉工作</option><option>作廢記錄</option></Select></Field></div><RuleBuilder/><Field label="拒絕提示語" required><input defaultValue="您目前的群組身份不允許執行此操作" /></Field><div className="test-result"><SafetyCertificateOutlined /><div><strong>試算通過</strong><span>測試用戶「陳家朗」符合目前條件</span></div></div></> : dataset === "users" ? <UserEditor record={editing ?? undefined} onSave={save} /> : dataset === "groups" ? <GroupEditor record={editing ?? undefined} onSave={save} /> : dataset === "roles" ? <RoleEditor record={editing ?? undefined} onSave={save} /> : <GenericEditor record={editing ?? undefined} onSave={save} />}
     </FormDrawer>
     <ConfirmDialog open={confirm} title="停用所選記錄？" message={`停用後將不再出現在新記錄的可選清單，共影響 ${selected.length} 筆。`} danger confirmLabel="確認停用" onCancel={() => setConfirm(false)} onConfirm={disableSelected} />
   </div>;
@@ -115,10 +236,15 @@ const actionTarget: Record<string, WorkStatus> = { "跟進": "跟進中", "解�
 
 export function WorkDetailPage() {
   const { id = "" } = useParams(); const navigate = useNavigate(); const { works, updateWorkStatus, updateWork } = useDemo(); const { showToast } = useToast();
+  const { authorize } = usePermissionRules();
   const work = works.find((item) => item.id === id) ?? works[0];
   const [action, setAction] = useState<string | null>(null); const [tab, setTab] = useState("處理記錄"); const [confirmVoid, setConfirmVoid] = useState(false);
   const actions = work.status === "新建" ? ["跟進", "重新分派", "留言"] : work.status === "跟進中" ? ["解決", "重新分派", "留言"] : work.status === "已解決" ? ["關閉", "重啟", "留言"] : ["重啟", "留言"];
   const submitAction = () => {
+    const operation = ({ "跟進": "follow", "解決": "resolve", "關閉": "close", "重啟": "reopen", "重新分派": "assign", "留言": "comment" } as Record<string, string>)[action ?? ""];
+    const latest = works.find((item) => item.id === id);
+    const decision = authorize(operation, { object: latest ? workPolicyObject(latest) : undefined });
+    if (!decision.allowed) { showToast(decision.reason, "error"); return; }
     if (action && actionTarget[action]) updateWorkStatus(work.id, actionTarget[action]);
     if (action === "重新分派") updateWork(work.id, { group: "環境衛生執行組", status: "新建" });
     showToast(`${action}操作已提交`); setAction(null);
@@ -138,7 +264,7 @@ export function WorkDetailPage() {
       </div></section>
     </main><aside><section className="panel location-panel"><header><h2>位置與操作軌跡</h2></header><MapSplitView toolbar={false} /><div className="location-address"><EnvironmentOutlined /><span>{work.address}<small>最近操作位置：18 米</small></span></div></section><section className="panel sla-panel"><header><h2>服務承諾</h2></header><div className="sla-count"><strong>{work.sla === "已逾時" ? "已逾時 2小時 18分" : "剩餘 42 分鐘"}</strong><StatusTag>{work.sla}</StatusTag></div><div className="sla-track"><i style={{ width: work.sla === "已逾時" ? "100%" : "82%" }} /></div><dl><div><dt>首次回覆</dt><dd>已達標</dd></div><div><dt>解決時限</dt><dd>4 小時</dd></div><div><dt>完成時限</dt><dd>8 小時</dd></div></dl></section></aside></div>
     <FormDrawer open={!!action} title={`${action ?? ""}工作`} subtitle={work.id} onClose={() => setAction(null)} onSubmit={submitAction} submitLabel={`確認${action ?? ""}`}><div className="action-summary"><ToolOutlined /><div><strong>{work.title}</strong><span>{work.status} → {action ? actionTarget[action] ?? work.status : work.status}</span></div></div><div className="form-grid">{action === "重新分派" && <Field label="新執行群組" required><Select value="環境衛生執行組" onChange={() => undefined}><option>環境衛生執行組</option><option>綠化養護組</option></Select></Field>}<Field label={action === "關閉" ? "驗收意見" : action === "重啟" ? "重啟原因" : action === "解決" ? "處理說明" : "備註"} required={action !== "跟進"}><textarea rows={5} placeholder="請輸入操作說明" defaultValue={action === "解決" ? "已完成現場維修及安全檢查。" : ""} /></Field>{action === "解決" && <Field label="附件" required><div className="mini-upload"><CloudUploadOutlined />上傳處理相片（最少 2 張）</div></Field>}</div></FormDrawer>
-    <ConfirmDialog open={confirmVoid} title="作廢此工作？" message="作廢後不計入統計，但所有處理記錄仍會保留。請確認已取得相應權限。" danger confirmLabel="確認作廢" onCancel={() => setConfirmVoid(false)} onConfirm={() => { updateWork(work.id, { voided: true }); setConfirmVoid(false); showToast("工作已作廢"); }} />
+    <ConfirmDialog open={confirmVoid} title="作廢此工作？" message="作廢後不計入統計，但所有處理記錄仍會保留。請確認已取得相應權限。" danger confirmLabel="確認作廢" onCancel={() => setConfirmVoid(false)} onConfirm={() => { const latest = works.find((item) => item.id === id); const decision = authorize("void", { object: latest ? workPolicyObject(latest) : undefined }); if (!decision.allowed) { showToast(decision.reason, "error"); return; } updateWork(work.id, { voided: true }); setConfirmVoid(false); showToast("工作已作廢"); }} />
   </div>;
 }
 
@@ -157,44 +283,71 @@ export function WorkCreatePage() {
   </div>;
 }
 
-export function PlanListPage() {
-  const { plans } = useDemo(); const navigate = useNavigate(); const [search, setSearch] = useState(""); const [status, setStatus] = useState("全部狀態");
-  const rows = plans.filter((plan) => (!search || `${plan.id}${plan.name}`.includes(search)) && (status === "全部狀態" || plan.status === status));
-  const columns: Column<Plan>[] = [
-    { key: "id", title: "計劃編號", width: 164, render: (plan) => <a>{plan.id}</a> }, { key: "name", title: "計劃名稱", width: 250 }, { key: "template", title: "計劃模板", width: 190 },
-    { key: "group", title: "巡查群組", width: 160 }, { key: "startAt", title: "開始時間", width: 156 }, { key: "status", title: "狀態", width: 96, render: (plan) => <StatusTag>{plan.status}</StatusTag> },
-    { key: "progress", title: "完成進度", width: 170, render: (plan) => <div className="table-progress"><div><i style={{ width: `${plan.total ? plan.progress / plan.total * 100 : 0}%` }} /></div><span>{plan.progress}/{plan.total}</span></div> },
+interface InspectionRecord {
+  id: string;
+  object: string;
+  planId: string;
+  template: string;
+  inspector: string;
+  group: string;
+  grid: string;
+  status: "未完成" | "已完成";
+  result: "正常" | "異常" | "待填寫";
+  submittedAt: string;
+  distance: string;
+  workCount: number;
+}
+
+const inspectionRecords: InspectionRecord[] = [
+  { id: "IN-20260929-0023", object: "黑沙環公園東門", planId: "PL-20260929-0003", template: "公園設施標準巡查表", inspector: "陳家朗", group: "北區巡查一組", grid: "花地瑪堂北區", status: "已完成", result: "正常", submittedAt: "2026-09-29 08:40", distance: "12m / 8m", workCount: 0 },
+  { id: "IN-20260929-0024", object: "黑沙環公園 · 兒童遊樂區", planId: "PL-20260929-0003", template: "公園設施標準巡查表", inspector: "陳家朗", group: "北區巡查一組", grid: "花地瑪堂北區", status: "已完成", result: "異常", submittedAt: "2026-09-29 09:16", distance: "18m / 8m", workCount: 1 },
+  { id: "IN-20260929-0025", object: "中央花圃", planId: "PL-20260929-0003", template: "公園設施標準巡查表", inspector: "陳家朗", group: "北區巡查一組", grid: "花地瑪堂北區", status: "已完成", result: "正常", submittedAt: "2026-09-29 09:32", distance: "21m / 8m", workCount: 0 },
+  { id: "IN-20260929-0026", object: "休憩亭", planId: "PL-20260929-0003", template: "公園設施標準巡查表", inspector: "陳家朗", group: "北區巡查一組", grid: "花地瑪堂北區", status: "已完成", result: "正常", submittedAt: "2026-09-29 09:48", distance: "15m / 7m", workCount: 0 },
+  { id: "IN-20260929-0027", object: "公園洗手間", planId: "PL-20260929-0003", template: "公園設施標準巡查表", inspector: "陳家朗", group: "北區巡查一組", grid: "花地瑪堂北區", status: "已完成", result: "正常", submittedAt: "2026-09-29 10:04", distance: "24m / 9m", workCount: 0 },
+  { id: "IN-20260929-0028", object: "健身設施區", planId: "PL-20260929-0003", template: "公園設施標準巡查表", inspector: "陳家朗", group: "北區巡查一組", grid: "花地瑪堂北區", status: "已完成", result: "正常", submittedAt: "2026-09-29 10:22", distance: "16m / 8m", workCount: 0 },
+  { id: "IN-20260929-0029", object: "緩跑徑南段", planId: "PL-20260929-0003", template: "公園設施標準巡查表", inspector: "陳家朗", group: "北區巡查一組", grid: "花地瑪堂北區", status: "已完成", result: "正常", submittedAt: "2026-09-29 10:38", distance: "19m / 8m", workCount: 0 },
+  { id: "IN-20260929-0030", object: "海濱座椅區 A", planId: "PL-20260929-0003", template: "公園設施標準巡查表", inspector: "—", group: "北區巡查一組", grid: "花地瑪堂北區", status: "未完成", result: "待填寫", submittedAt: "—", distance: "—", workCount: 0 },
+];
+
+export function InspectionListPage() {
+  const navigate = useNavigate(); const { showToast } = useToast();
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("全部狀態");
+  const [result, setResult] = useState("全部結果");
+  const [group, setGroup] = useState("全部群組");
+  const [selected, setSelected] = useState<string[]>([]);
+  const rows = inspectionRecords.filter((record) => (!search || `${record.id}${record.object}${record.planId}${record.inspector}`.toLowerCase().includes(search.toLowerCase())) && (status === "全部狀態" || record.status === status) && (result === "全部結果" || record.result === result) && (group === "全部群組" || record.group === group));
+  const columns: Column<InspectionRecord>[] = [
+    { key: "id", title: "巡查編號", width: 168, sortable: true, render: (record) => <a>{record.id}</a> },
+    { key: "object", title: "巡查對象", width: 230, render: (record) => <div className="cell-main"><strong>{record.object}</strong><span>{record.grid}</span></div> },
+    { key: "planId", title: "所屬計劃", width: 170 },
+    { key: "template", title: "巡查模板", width: 190 },
+    { key: "inspector", title: "巡查人員", width: 110 },
+    { key: "status", title: "狀態", width: 92, render: (record) => <StatusTag>{record.status}</StatusTag> },
+    { key: "result", title: "結果", width: 92, render: (record) => <StatusTag tone={record.result === "異常" ? "danger" : record.result === "正常" ? "success" : "neutral"}>{record.result}</StatusTag> },
+    { key: "submittedAt", title: "提交時間", width: 168, sortable: true },
+    { key: "workCount", title: "關聯工作", width: 90, render: (record) => record.workCount || "—" },
   ];
-  return <div className="page-content"><PageHeader title="巡查計劃" description="建立、指派及追蹤巡查計劃與作業進度" actions={<><Button icon={<ExportOutlined />}>匯出</Button><Button variant="primary" icon={<PlusOutlined />} onClick={() => navigate("/plans/new")}>新增計劃</Button></>} /><section className="panel list-panel"><FilterBar search={search} onSearch={setSearch} onReset={() => { setSearch(""); setStatus("全部狀態"); }}><Select value={status} onChange={setStatus}><option>全部狀態</option><option>未開始</option><option>進行中</option><option>已中止</option><option>已完成</option></Select><Select value="本週" onChange={() => undefined}><option>本週</option><option>今日</option><option>本月</option></Select></FilterBar><DenseTable rows={rows} columns={columns} onRowClick={(plan) => navigate(`/plans/${plan.id}`)} /><Pagination total={rows.length} /></section></div>;
-}
-
-export function PlanDetailPage() {
-  const { id = "" } = useParams(); const { plans } = useDemo(); const { showToast } = useToast(); const [tab, setTab] = useState("巡查"); const [locked, setLocked] = useState(false);
-  const plan = plans.find((item) => item.id === id) ?? plans[0];
-  const inspections = makeRecords("IN", ["黑沙環公園東門", "兒童遊樂區", "中央花圃", "休憩亭", "公園洗手間"]);
-  return <div className="page-content detail-page"><PageHeader eyebrow="巡查計劃 / 計劃詳情" title={plan.name} description={`${plan.id} · ${plan.startAt} 至 ${plan.endAt}`} actions={<><Button icon={<EditOutlined />}>編輯</Button><Button icon={<PlusOutlined />}>加入巡查</Button><Button variant="primary" icon={<LockOutlined />} onClick={() => setLocked(true)}>強制中止</Button></>} />
-    <div className="status-strip"><div><span>狀態</span><StatusTag>{plan.status}</StatusTag></div><div><span>巡查群組</span><strong>{plan.group}</strong></div><div><span>目前執行人</span><strong>{plan.executor ?? "尚未開始"}</strong></div><div><span>完成進度</span><strong>{plan.progress} / {plan.total}</strong></div><div><span>所屬網格</span><strong>{plan.grid}</strong></div></div>
-    <section className="panel plan-map-panel"><MapSplitView><div className="map-side-head"><div><h2>路線內對象</h2><span>共 {plan.total} 個巡查</span></div><FilterOutlined /></div><div className="object-list">{inspections.map((item, index) => <Link to="/inspections/IN-20260929-0024" key={item.id}><span className={`object-index ${index < plan.progress ? "done" : index === plan.progress ? "active" : ""}`}>{index < plan.progress ? <CheckOutlined /> : index + 1}</span><div><strong>{item.name}</strong><span>{index < plan.progress ? "已完成 · 09:32" : index === plan.progress ? "巡查中" : "未開始"}</span></div>{index === 2 && <StatusTag>異常</StatusTag>}</Link>)}</div></MapSplitView></section>
-    <section className="panel tab-panel"><nav>{["巡查", "事件", "工作", "作業記錄"].map((item) => <button className={tab === item ? "active" : ""} key={item} onClick={() => setTab(item)}>{item}</button>)}</nav><div className="tab-content compact"><ActivityTimeline items={[{ title: "開始作業", time: "2026-09-29 08:36", text: "陳家朗取得作業鎖並開始執行計劃", tone: "info" }, { title: "完成巡查 IN-20260929-0023", time: "09:32", text: "兒童遊樂區發現 1 個異常項目" }, { title: "建立工作 WK-20260929-0012", time: "09:18", text: "由異常巡查項目建立並自動分派" }]} /></div></section>
-    <ConfirmDialog open={locked} title="強制中止進行中的計劃？" message={`目前由 ${plan.executor ?? "其他人員"} 執行。強制中止會立即釋放作業鎖，請確認已與前線人員協調。`} danger confirmLabel="強制中止" onCancel={() => setLocked(false)} onConfirm={() => { setLocked(false); showToast("計劃已強制中止"); }} />
-  </div>;
-}
-
-export function PlanFormPage() {
-  const { addPlan, plans } = useDemo(); const navigate = useNavigate(); const { showToast } = useToast();
-  const create = () => { const plan: Plan = { id: `PL-20260929-${String(plans.length + 5).padStart(4, "0")}`, name: "南灣湖設施巡查", template: "中區步行路線", group: "中區巡查組", status: "未開始", startAt: "2026-09-30 09:00", endAt: "2026-09-30 12:00", progress: 0, total: 14, grid: "大堂南區" }; addPlan(plan); showToast("計劃已建立，並產生 14 個巡查"); navigate(`/plans/${plan.id}`); };
-  return <div className="page-content form-page"><PageHeader eyebrow="巡查計劃 / 新增計劃" title="新增巡查計劃" description="選擇模板後，系統會預覽路線並產生對象 × 模板巡查清單" actions={<><Button onClick={() => navigate("/plans")}>取消</Button><Button variant="primary" icon={<CheckOutlined />} onClick={create}>建立計劃</Button></>} />
-    <div className="plan-create-grid"><section className="panel form-section"><header><h2>計劃設定</h2></header><div className="form-grid two-col"><Field label="計劃名稱" required><input defaultValue="南灣湖設施巡查" /></Field><Field label="計劃模板" required><Select value="中區步行路線" onChange={() => undefined}><option>中區步行路線</option><option>公園設施巡查路線 A</option></Select></Field><Field label="開始時間" required><input type="datetime-local" defaultValue="2026-09-30T09:00" /></Field><Field label="結束時間" required><input type="datetime-local" defaultValue="2026-09-30T12:00" /></Field><Field label="巡查群組" required><Select value="中區巡查組" onChange={() => undefined}><option>中區巡查組</option><option>北區巡查一組</option></Select></Field><Field label="預設巡查人員"><Select value="梁嘉敏" onChange={() => undefined}><option>梁嘉敏</option><option>陳家朗</option></Select></Field><Field label="備註"><textarea rows={4} placeholder="選填" /></Field></div></section><section className="panel preview-panel"><header><div><h2>路線及巡查預覽</h2><p>將產生 14 個巡查</p></div><StatusTag>14 個對象</StatusTag></header><MapSplitView toolbar={false}/><div className="preview-summary"><span><b>8.4 km</b>預計路線</span><span><b>3 小時</b>預計時長</span><span><b>14</b>巡查項目</span></div></section></div>
+  return <div className="page-content"><PageHeader title="巡查記錄" description="查詢巡查結果、異常項目、定位校驗及關聯工作" actions={<><Button icon={<EnvironmentOutlined />} onClick={() => showToast("已切換巡查記錄地圖視圖")}>地圖視圖</Button><Button icon={<ExportOutlined />} onClick={() => showToast("巡查記錄匯出任務已建立")}>匯出</Button></>} />
+    <section className="panel list-panel"><FilterBar search={search} onSearch={setSearch} onReset={() => { setSearch(""); setStatus("全部狀態"); setResult("全部結果"); setGroup("全部群組"); }} onAdvanced={() => showToast("已展開巡查記錄高級篩選條件")}>
+      <Select value={status} onChange={setStatus}><option>全部狀態</option><option>未完成</option><option>已完成</option></Select>
+      <Select value={result} onChange={setResult}><option>全部結果</option><option>正常</option><option>異常</option><option>待填寫</option></Select>
+      <Select value={group} onChange={setGroup}><option>全部群組</option><option>北區巡查一組</option><option>中區巡查組</option></Select>
+    </FilterBar>
+    {selected.length > 0 && <div className="batch-bar"><strong>已選 {selected.length} 筆巡查</strong><Button icon={<ExportOutlined />} onClick={() => showToast(`已建立 ${selected.length} 筆巡查的匯出任務`)}>匯出所選</Button></div>}
+    <DenseTable rows={rows} columns={columns} selected={selected} onSelected={setSelected} onRowClick={(record) => navigate(`/inspections/${record.id}`)} emptyText="沒有符合條件的巡查記錄" /><Pagination total={rows.length} /></section>
   </div>;
 }
 
 export function InspectionDetailPage() {
-  const navigate = useNavigate(); const { showToast } = useToast(); const [supplement, setSupplement] = useState(false);
-  const items = [{ name: "座椅穩固狀態", result: "否", abnormal: true, note: "左側固定螺絲鬆脫" }, { name: "座椅表面清潔", result: "正常", abnormal: false }, { name: "周邊地面狀態", result: "正常", abnormal: false }, { name: "照明設施", result: "正常", abnormal: false }];
-  return <div className="page-content detail-page"><PageHeader eyebrow="巡查記錄 / 詳情" title="黑沙環公園 · 兒童遊樂區" description="IN-20260929-0024 · 公園設施標準巡查表" actions={<><Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>返回</Button><Button icon={<PlusOutlined />} onClick={() => setSupplement(true)}>補錄</Button><Button variant="primary" icon={<ToolOutlined />} onClick={() => navigate("/works/new")}>建立工作</Button></>} />
-    <div className="status-strip"><div><span>狀態</span><StatusTag>已完成</StatusTag></div><div><span>巡查人員</span><strong>陳家朗</strong></div><div><span>提交時間</span><strong>2026-09-29 09:16</strong></div><div><span>定位校驗</span><StatusTag>通過</StatusTag></div><div><span>距離／精度</span><strong>18m / 8m</strong></div></div>
-    <div className="inspection-layout"><main><section className="panel inspection-sheet"><header><div><h2>巡查項目結果</h2><p>共 4 項 · 1 項異常</p></div><StatusTag tone="danger">發現異常</StatusTag></header>{items.map((item, index) => <article className={item.abnormal ? "abnormal" : ""} key={item.name}><div className="inspection-index">{String(index + 1).padStart(2, "0")}</div><div><strong>{item.name}</strong><span>上次巡查：2026-09-22 · 正常</span>{item.note && <p>{item.note}</p>}</div><StatusTag tone={item.abnormal ? "danger" : "success"}>{item.result}</StatusTag>{item.abnormal && <Button variant="primary" onClick={() => navigate("/works/WK-20260929-0012")}>查看工作</Button>}</article>)}</section><section className="panel"><header className="section-header"><h2>附件與簽名</h2></header><AttachmentViewer /></section></main><aside><section className="panel location-panel"><header><h2>提交位置</h2></header><MapSplitView toolbar={false}/><div className="location-address"><EnvironmentOutlined /><span>黑沙環公園近兒童遊樂區<small>定位校驗通過 · 距對象 18 米</small></span></div></section><section className="panel change-log"><header><h2>變更記錄</h2></header><ActivityTimeline items={[{ title: "提交巡查", time: "09:16", text: "陳家朗提交巡查結果" }, { title: "開始填寫", time: "09:08", text: "定位校驗通過" }]} /></section></aside></div>
-    <FormDrawer open={supplement} title="補錄巡查資料" subtitle="IN-20260929-0024" onClose={() => setSupplement(false)} onSubmit={() => { setSupplement(false); showToast("補錄資料已保存並留痕"); }}><Field label="補錄原因" required><textarea rows={4} defaultValue="補充現場整體照片" /></Field><Field label="附件"><div className="mini-upload"><CloudUploadOutlined />加入相片或文件</div></Field></FormDrawer>
+  const { id = "" } = useParams(); const navigate = useNavigate(); const { showToast } = useToast(); const [supplement, setSupplement] = useState(false);
+  const record = inspectionRecords.find((item) => item.id === id) ?? inspectionRecords[0];
+  const abnormal = record.result === "異常";
+  const items = [{ name: "座椅穩固狀態", result: abnormal ? "否" : record.status === "已完成" ? "正常" : "待填寫", abnormal, note: abnormal ? "左側固定螺絲鬆脫" : undefined }, { name: "座椅表面清潔", result: record.status === "已完成" ? "正常" : "待填寫", abnormal: false }, { name: "周邊地面狀態", result: record.status === "已完成" ? "正常" : "待填寫", abnormal: false }, { name: "照明設施", result: record.status === "已完成" ? "正常" : "待填寫", abnormal: false }];
+  return <div className="page-content detail-page"><PageHeader eyebrow="巡查記錄 / 巡查詳情" title={record.object} description={`${record.id} · ${record.template}`} actions={<><Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/inspections")}>返回列表</Button>{record.status === "已完成" && <Button icon={<PlusOutlined />} onClick={() => setSupplement(true)}>補錄</Button>}{abnormal && <Button variant="primary" icon={<ToolOutlined />} onClick={() => navigate("/works/new")}>建立工作</Button>}</>} />
+    <div className="status-strip"><div><span>狀態</span><StatusTag>{record.status}</StatusTag></div><div><span>巡查人員</span><strong>{record.inspector}</strong></div><div><span>提交時間</span><strong>{record.submittedAt}</strong></div><div><span>定位校驗</span><StatusTag>{record.status === "已完成" ? "通過" : "待校驗"}</StatusTag></div><div><span>距離／精度</span><strong>{record.distance}</strong></div></div>
+    <div className="inspection-layout"><main><section className="panel inspection-sheet"><header><div><h2>巡查項目結果</h2><p>{record.status === "未完成" ? "共 4 項 · 尚未填寫" : abnormal ? "共 4 項 · 1 項異常" : "共 4 項 · 全部正常"}</p></div><StatusTag tone={abnormal ? "danger" : record.status === "已完成" ? "success" : "neutral"}>{abnormal ? "發現異常" : record.status === "已完成" ? "全部正常" : "尚未提交"}</StatusTag></header>{items.map((item, index) => <article className={item.abnormal ? "abnormal" : ""} key={item.name}><div className="inspection-index">{String(index + 1).padStart(2, "0")}</div><div><strong>{item.name}</strong><span>上次巡查：2026-09-22 · 正常</span>{item.note && <p>{item.note}</p>}</div><StatusTag tone={item.abnormal ? "danger" : item.result === "正常" ? "success" : "neutral"}>{item.result}</StatusTag>{item.abnormal && <Button variant="primary" onClick={() => navigate("/works/WK-20260929-0012")}>查看工作</Button>}</article>)}</section><section className="panel"><header className="section-header"><h2>附件與簽名</h2></header><AttachmentViewer /></section></main><aside><section className="panel location-panel"><header><h2>提交位置</h2></header><MapSplitView toolbar={false}/><div className="location-address"><EnvironmentOutlined /><span>{record.object}<small>{record.status === "已完成" ? `定位校驗通過 · 距離／精度 ${record.distance}` : "尚未進行定位校驗"}</small></span></div></section><section className="panel change-log"><header><h2>變更記錄</h2></header><ActivityTimeline items={record.status === "已完成" ? [{ title: "提交巡查", time: record.submittedAt.slice(11), text: `${record.inspector}提交巡查結果` }, { title: "開始填寫", time: "09:08", text: "定位校驗通過" }] : [{ title: "建立巡查", time: "08:36", text: `由計劃 ${record.planId} 自動產生` }]} /></section></aside></div>
+    <FormDrawer open={supplement} title="補錄巡查資料" subtitle={record.id} onClose={() => setSupplement(false)} onSubmit={() => { setSupplement(false); showToast("補錄資料已保存並留痕"); }}><Field label="補錄原因" required><textarea rows={4} defaultValue="補充現場整體照片" /></Field><Field label="附件"><div className="mini-upload"><CloudUploadOutlined />加入相片或文件</div></Field></FormDrawer>
   </div>;
 }
 
@@ -213,7 +366,7 @@ export function EventEditorPage() {
 
 export function TrackingPage() {
   const [type, setType] = useState("用戶軌跡"); const [queried, setQueried] = useState(true);
-  return <div className="page-content tracking-page"><PageHeader title="軌跡查詢" description="按人員、巡查計劃或巡查記錄檢視定位點及最後位置" actions={<Button icon={<ExportOutlined />}>匯出軌跡</Button>} /><section className="panel track-filter"><div className="segmented">{["用戶軌跡", "巡查計劃軌跡", "巡查軌跡"].map((item) => <button key={item} className={type === item ? "active" : ""} onClick={() => setType(item)}>{item}</button>)}</div><Field label="人員"><Select value="陳家朗" onChange={() => undefined}><option>陳家朗</option><option>李芷晴</option></Select></Field><Field label="日期範圍"><input value="2026-09-29 — 2026-09-29" readOnly /></Field><label className="switch-row"><input type="checkbox" defaultChecked /><span className="switch" />過濾漂移點</label><Button variant="primary" icon={<SearchIcon />} onClick={() => setQueried(true)}>查詢</Button></section><section className="panel track-map"><MapSplitView><div className="track-summary"><header><h2>陳家朗</h2><StatusTag>在線</StatusTag></header><dl><div><dt>定位點</dt><dd>126</dd></div><div><dt>有效點</dt><dd>119</dd></div><div><dt>移動距離</dt><dd>8.4 km</dd></div><div><dt>最後位置</dt><dd>11:52</dd></div></dl><Button icon={<EnvironmentOutlined />}>定位最後位置</Button><div className="track-events"><strong>關鍵定位點</strong><span><i />09:08 開始巡查</span><span><i />09:16 提交巡查</span><span><i />09:46 開始跟進工作</span></div></div></MapSplitView>{!queried && <div className="map-empty">請先設定條件並查詢</div>}</section></div>;
+  return <div className="page-content tracking-page"><PageHeader title="軌跡查詢" description="按人員、巡查計劃或巡查記錄檢視定位點及最後位置" actions={<Button icon={<ExportOutlined />}>匯出軌跡</Button>} /><section className="panel track-filter"><div className="segmented">{["用戶軌跡", "巡查計劃軌跡", "巡查軌跡"].map((item) => <button key={item} className={type === item ? "active" : ""} onClick={() => setType(item)}>{item}</button>)}</div><Field label="人員"><Select value="陳家朗" onChange={() => undefined}><option>陳家朗</option><option>李芷晴</option></Select></Field><Field label="日期範圍"><input value="2026-09-29 — 2026-09-29" readOnly /></Field><div className="switch-row"><label className="switch-control"><input type="checkbox" defaultChecked /><span className="switch" /></label><span className="switch-label">過濾漂移點</span></div><Button variant="primary" icon={<SearchIcon />} onClick={() => setQueried(true)}>查詢</Button></section><section className="panel track-map"><MapSplitView><div className="track-summary"><header><h2>陳家朗</h2><StatusTag>在線</StatusTag></header><dl><div><dt>定位點</dt><dd>126</dd></div><div><dt>有效點</dt><dd>119</dd></div><div><dt>移動距離</dt><dd>8.4 km</dd></div><div><dt>最後位置</dt><dd>11:52</dd></div></dl><Button icon={<EnvironmentOutlined />}>定位最後位置</Button><div className="track-events"><strong>關鍵定位點</strong><span><i />09:08 開始巡查</span><span><i />09:16 提交巡查</span><span><i />09:46 開始跟進工作</span></div></div></MapSplitView>{!queried && <div className="map-empty">請先設定條件並查詢</div>}</section></div>;
 }
 
 function SearchIcon() { return <FileSearchOutlined />; }

@@ -49,14 +49,16 @@ export function makeRecords(prefix: string, labels: string[], status = "啟用")
 export const genericDatasets: Record<string, GenericRecord[]> = {
   users: makeRecords("USR", ["陳家朗", "李芷晴", "梁嘉敏", "黃志峰", "何浩然", "區詠珊"]),
   groups: makeRecords("GRP", ["北區巡查一組", "中區巡查組", "離島巡查組", "公園設施維護組", "環境衛生執行組", "綠化養護組"]),
-  roles: makeRecords("ROL", ["系統管理員", "巡查主管", "前線巡查員", "工作執行人員", "報表檢視員"]),
+  roles: makeRecords("ROL", ["系統管理員", "巡查主管", "前線巡查員", "工作執行人員", "報表檢視員"]).map((record, index) => ({
+    ...record,
+    level: String(index + 1),
+    roleType: index === 0 ? "管理員" : "普通用戶",
+  })),
   rules: makeRecords("PERM", ["關閉工作校驗", "新增計劃校驗", "執行計劃校驗", "跟進工作校驗", "作廢記錄校驗"]),
   grids: makeRecords("GRID", ["花地瑪堂北區", "望德堂中區", "大堂南區", "氹仔中央區", "路環東區"]),
   inspectionTypes: makeRecords("IT", ["公園設施巡查", "街道環境巡查", "綠化設施巡查", "海濱設施巡查", "公共廁所巡查"]),
   items: makeRecords("ITEM", ["座椅穩固狀態", "照明設施狀態", "垃圾桶清潔度", "灌溉系統狀態", "指示牌清晰度", "遊樂設施安全"]),
   objects: makeRecords("OBJ", ["黑沙環公園", "塔石廣場", "紀念孫中山市政公園", "嘉模公園", "黑沙海灘休憩區", "路環步行徑"]),
-  templates: makeRecords("TPL", ["公園設施標準巡查表", "街道環境標準巡查表", "綠化設施巡查表", "海濱設施巡查表", "公共廁所巡查表"]),
-  nfc: makeRecords("NFC", ["黑沙環公園東門標籤", "塔石廣場服務站標籤", "嘉模公園溫室標籤", "黑沙海灘救生站標籤"]),
   planTemplates: makeRecords("PT", ["公園設施巡查路線 A", "中區步行路線", "氹仔綜合路線", "路環山徑路線"]),
   eventTypes: makeRecords("ET", ["公共設施異常", "環境衛生問題", "綠化問題", "道路通行問題", "其他事件"]),
   workTypes: makeRecords("WT", ["公共設施維修", "環境衛生處理", "樹木修剪", "灌溉維修", "標示更換"]),
@@ -73,4 +75,3 @@ export const reportTrend = [
   { day: "09/27", plans: 39, works: 14 }, { day: "09/28", plans: 56, works: 21 },
   { day: "09/29", plans: 61, works: 28 },
 ];
-

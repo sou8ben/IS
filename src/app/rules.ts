@@ -96,6 +96,14 @@ const isEmpty = (item: TemplateItem, result?: ItemResult) => {
   return value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
 };
 
+// 巡查項目按項目類型分組顯示：類別按首次出現的次序，序號跨類別連續。
+export function groupTemplateItems(items: TemplateItem[]) {
+  const groups: { type: string; items: { item: TemplateItem; no: number }[] }[] = [];
+  items.forEach((item) => { const group = groups.find((entry) => entry.type === item.itemType); if (group) group.items.push({ item, no: 0 }); else groups.push({ type: item.itemType, items: [{ item, no: 0 }] }); });
+  let no = 0; groups.forEach((group) => group.items.forEach((entry) => { entry.no = ++no; }));
+  return groups;
+}
+
 export interface SubmitError { key: string; message: string }
 export function validateInspection(template: InspectionTemplate, inspection: Inspection, results: Record<string, ItemResult>): SubmitError[] {
   const errors: SubmitError[] = [];
@@ -105,8 +113,9 @@ export function validateInspection(template: InspectionTemplate, inspection: Ins
     else if (location.accuracy > template.validDistance) errors.push({ key: "location", message: `定位精度不足（±${location.accuracy} 米），請重新定位` });
     else if (location.distance > template.validDistance) errors.push({ key: "location", message: `未在對象 ${template.validDistance} 米範圍內（目前距離 ${location.distance} 米）` });
   }
-  template.items.forEach((item) => { if (item.required && isEmpty(item, results[item.key])) errors.push({ key: item.key, message: `『${item.name}』為必填` }); });
-  template.items.forEach((item) => { const count = results[item.key]?.photos.length ?? 0; if (count < item.minAttachments) errors.push({ key: item.key, message: `『${item.name}』需至少 ${item.minAttachments} 張相片` }); });
+  const ordered = groupTemplateItems(template.items).flatMap((group) => group.items.map((entry) => entry.item));
+  ordered.forEach((item) => { if (item.required && isEmpty(item, results[item.key])) errors.push({ key: item.key, message: `『${item.name}』為必填` }); });
+  ordered.forEach((item) => { const count = results[item.key]?.photos.length ?? 0; if (count < item.minAttachments) errors.push({ key: item.key, message: `『${item.name}』需至少 ${item.minAttachments} 張相片` }); });
   return errors;
 }
 

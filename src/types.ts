@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { PlanChange, PlannedInspection, PlanSnapshot } from "./plan-rules";
 
 export type WorkStatus = "新建" | "跟進中" | "已解決" | "已關閉";
 export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -44,6 +45,18 @@ export interface Plan {
   total: number;
   executor?: string;
   grid: string;
+  department?: string;
+  objectIds?: string[];
+  note?: string;
+  planTemplateId?: string;
+  groupId?: string;
+  /** Plan template copy taken at creation; later template edits never change the plan. */
+  snapshot?: PlanSnapshot;
+  /** Inspections generated or added in the back office; the App materialises the non-補入 entries. */
+  inspections?: PlannedInspection[];
+  changes?: PlanChange[];
+  createdBy?: string;
+  createdAt?: string;
 }
 
 export interface EventRecord {
@@ -95,6 +108,7 @@ export interface Column<T extends { id: string }> {
   width?: number;
   render?: (row: T) => ReactNode;
   sortable?: boolean;
+  sortValue?: (row: T) => string | number;
 }
 
 export interface GenericRecord {
@@ -102,10 +116,11 @@ export interface GenericRecord {
   name: string;
   code: string;
   category: string;
+  level?: string;
+  roleType?: "管理員" | "普通用戶";
   owner: string;
   updatedAt: string;
   status: string;
   note?: string;
   count?: number;
 }
-

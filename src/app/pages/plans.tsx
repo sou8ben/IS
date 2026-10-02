@@ -5,7 +5,7 @@ import { AddOutline, CheckOutline, ClockCircleOutline, EnvironmentOutline, Excla
 import type { Plan } from "../../types";
 import { AttachmentField, Card, Empty, FilterOptions, GroupTitle, InfoList, LegendDot, MapView, NfcPopup, Page, Progress, ReasonDialog, SignatureField, StatusTag, type MapMarker } from "../components";
 import { eventMeta, myTrack, nearbyObjects, objectIndex, photoAssets, planRoutes, templates } from "../data";
-import { isAbnormal, nowText, shortTime, validateInspection, visiblePlans, workInspection, workPoint, type SubmitError } from "../rules";
+import { groupTemplateItems, isAbnormal, nowText, shortTime, validateInspection, visiblePlans, workInspection, workPoint, type SubmitError } from "../rules";
 import { useApp } from "../store";
 import type { Inspection, ItemResult, TemplateItem } from "../types";
 
@@ -111,7 +111,7 @@ export function PlanWorkPage() {
       <div className="m-plan-strip-progress"><strong>{done}<small>/{inspections.length}</small></strong><span>已巡查</span></div>
     </div>
     <div className={`m-split ${expanded ? "list-expanded" : ""}`}>
-      <MapView key={ids.join()} markers={markers} routes={ids.map((planId) => planRoutes[planId] ?? [])} track={mineActive && ids.includes("PL-20260929-0003") ? myTrack : undefined} className="m-split-map"
+      <MapView key={ids.join()} markers={markers} routes={ids.map((planId) => planRoutes[planId] ?? plans.find((item) => item.id === planId)?.snapshot?.route ?? [])} track={mineActive && ids.includes("PL-20260929-0003") ? myTrack : undefined} className="m-split-map"
         legend={<><LegendDot tone="todo">未巡查</LegendDot><LegendDot tone="done">已完成</LegendDot><LegendDot tone="issue">有異常</LegendDot><LegendDot tone="work">工作</LegendDot></>} />
       <div className="m-split-list">
         <button className="m-sheet-handle" aria-label={expanded ? "收起清單" : "展開清單"} onClick={() => setExpanded(!expanded)}><i /></button>
@@ -226,12 +226,12 @@ export function InspectionFormPage() {
     {errors.length > 0 && <div className="m-error-summary" id="insp-errors"><strong><ExclamationCircleFill /> 提交前請修正以下 {errors.length} 項</strong><ol>{errors.map((error, index) => <li key={index}><button onClick={() => document.getElementById(error.key === "location" ? "insp-errors" : `item-${error.key}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}>{error.message}</button></li>)}</ol></div>}
     {lockedByOther && inspection.status === "未完成" && <div className="m-inline-note">此巡查屬計劃「{plan?.name}」，需由持有作業鎖的人員填寫。</div>}
     <GroupTitle extra={<span>{template.items.filter((item) => item.required).length} 項必填</span>}>巡查項目</GroupTitle>
-    {template.items.map((item, index) => {
+    {groupTemplateItems(template.items).map((group) => <div className="m-item-group" key={group.type}><div className="m-item-category"><strong>{group.type}</strong><span>{group.items.length} 項</span></div>{group.items.map(({ item, no }) => {
       const result = results[item.key] ?? { photos: [] };
       const abnormal = isAbnormal(item, result.value);
       const works = linkedWorks.filter((work) => (workInspection(work).inspectionId === id ? workInspection(work).itemKey : itemOf(work.id)) === item.key);
       return <section key={item.key} id={`item-${item.key}`} className={`m-item ${abnormal ? "abnormal" : ""} ${errorKeys.has(item.key) ? "error" : ""}`}>
-        <header><span className="m-item-no">{String(index + 1).padStart(2, "0")}</span><strong>{item.required && <b>*</b>}{item.name}</strong><small>{item.itemType}</small>{abnormal && <StatusTag>異常</StatusTag>}</header>
+        <header><span className="m-item-no">{String(no).padStart(2, "0")}</span><strong>{item.required && <b>*</b>}{item.name}</strong>{abnormal && <StatusTag>異常</StatusTag>}</header>
         {item.aux && <div className="m-aux"><FileOutline /><span>{item.aux.label}：{item.aux.value ?? "無"}{item.aux.date ? `（${item.aux.date}）` : ""}</span></div>}
         <ItemControl item={item} result={result} disabled={!editable} onChange={(value) => setItem(item.key, value)} />
         {errors.filter((error) => error.key === item.key).map((error) => <p className="m-item-error" key={error.message}>{error.message}</p>)}
@@ -240,7 +240,7 @@ export function InspectionFormPage() {
         {(editable || result.photos.length > 0 || item.minAttachments > 0) && <AttachmentField value={result.photos} min={item.minAttachments} max={6} place={object.name} allowAlbum={false} allowVideo sample={itemPhoto[item.key] ?? photoAssets.seat} disabled={!editable} onChange={(photos) => setItem(item.key, { ...result, photos })} />}
         {editable ? <Input className="m-remark" placeholder="項目備註（選填，≤ 200 字）" maxLength={200} value={result.remark ?? ""} onChange={(remark) => setItem(item.key, { ...result, remark })} /> : result.remark ? <p className="m-remark-text">備註：{result.remark}</p> : null}
       </section>;
-    })}
+    })}</div>)}
     {linkedWorks.length > 0 && <Card title="相關工作">{linkedWorks.map((work) => <button key={work.id} className="m-linked" onClick={() => navigate(`/works/${work.id}`)}><span>{work.title}</span><strong>{work.id}</strong><StatusTag>{work.status}</StatusTag></button>)}</Card>}
     {(inspection.supplements?.length ?? 0) > 0 && <Card title="補錄記錄">{inspection.supplements!.map((entry, index) => <div className="m-supplement" key={index}><strong>{entry.operator} · {shortTime(entry.time)}</strong><span>{entry.reason}</span></div>)}</Card>}
     <NfcPopup visible={nfc} expected={object.nfc} onClose={() => setNfc(false)} onScanned={(tag) => {

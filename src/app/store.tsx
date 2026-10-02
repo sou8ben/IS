@@ -83,8 +83,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const syncPlanProgress = (planId: string | undefined, inspections: Inspection[]) => {
     if (!planId) return;
     const list = inspections.filter((item) => item.planId === planId);
-    sharedRef.current.updatePlan(planId, { progress: list.filter((item) => item.status === "已完成").length, total: list.length });
+    // 後台補入的巡查只存在於計劃記錄，進度亦須計入
+    const supplements = (sharedRef.current.plans.find((plan) => plan.id === planId)?.inspections ?? []).filter((entry) => entry.source === "補入").length;
+    sharedRef.current.updatePlan(planId, { progress: list.filter((item) => item.status === "已完成").length + supplements, total: list.length + supplements });
   };
+
+  // 後台建立計劃或增加巡查後，App 未有的巡查按計劃快照補建為「未完成」；「補入」只屬後台補錄，不下發
+  useEffect(() => {
+    const missing = shared.plans.flatMap((plan) => (plan.inspections ?? []).filter((entry) => entry.source !== "補入" && !stateRef.current.inspections.some((item) => item.id === entry.id)).map((entry) => ({ planId: plan.id, entry })));
+    if (!missing.length) return;
+    const added: Inspection[] = missing.map(({ planId, entry }) => ({ id: entry.id, planId, objectId: entry.objectId, templateId: entry.templateId, seq: entry.seq, status: "未完成", results: {} }));
+    const inspections = [...stateRef.current.inspections, ...added];
+    setState((current) => ({ ...current, inspections: [...current.inspections, ...added.filter((item) => !current.inspections.some((existing) => existing.id === item.id))] }));
+    [...new Set(missing.map((item) => item.planId))].forEach((planId) => syncPlanProgress(planId, inspections));
+  }, [shared.plans]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- 同步引擎：在線時逐筆處理佇列（詳細設計 12.2） ----
   useEffect(() => {

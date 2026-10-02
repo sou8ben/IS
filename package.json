@@ -8,7 +8,11 @@
     "build": "vite build && node scripts/prepare-sites-build.mjs",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test:sites": "node --test tests/sites-worker.test.mjs"
+    "test:sites": "node --test tests/sites-worker.test.mjs",
+    "test:permissions": "node --test tests/permission-rules.test.mjs",
+    "test:nfc": "node --test tests/nfc-tags.test.mjs",
+    "test:templates": "node --test tests/inspection-templates.test.mjs",
+    "test:plans": "node --test tests/plan-rules.test.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

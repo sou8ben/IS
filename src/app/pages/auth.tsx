@@ -110,11 +110,15 @@ export function CheckPermissionPage() {
   return <div className="m-check m-permission">
     <h1>開始使用前，請授予以下權限</h1>
     <p>巡查軌跡及現場定位校驗需要以下設定。</p>
-    <div className="m-permission-list">{items.map((item) => <div key={item.key} className={granted[item.key] ? "done" : ""}>
-      <span className="m-permission-icon">{item.icon}</span>
-      <div><strong>{item.title}</strong><small>{item.text}</small></div>
-      {granted[item.key] ? <span className="m-permission-ok"><CheckCircleFill /> 已授予</span> : <Button size="mini" color="primary" fill="outline" onClick={() => { setGranted({ ...granted, [item.key]: true }); Toast.show({ content: "已從系統設定返回" }); }}>{item.action}</Button>}
-    </div>)}</div>
+    <div className="m-permission-list">{items.map((item, index) => <article key={item.key} className={`m-permission-item ${granted[item.key] ? "done" : ""}`}>
+      <div className="m-permission-head">
+        <span className="m-permission-icon">{item.icon}</span>
+        <div className="m-permission-title"><strong>{item.title}</strong><span>步驟 {index + 1}／{items.length}</span></div>
+        {granted[item.key] && <span className="m-permission-ok"><CheckCircleFill /> 已授予</span>}
+      </div>
+      <small className="m-permission-desc">{item.text}</small>
+      {!granted[item.key] && <Button className="m-permission-action" block size="small" color="primary" fill="outline" onClick={() => { setGranted({ ...granted, [item.key]: true }); Toast.show({ content: "已從系統設定返回" }); }}>{item.action}</Button>}
+    </article>)}</div>
     <Button block color="primary" size="large" disabled={!all} onClick={finish}>完成，進入主頁</Button>
     <Button block fill="none" onClick={() => { void Dialog.confirm({ title: "稍後設定？", content: "未授予「始終允許定位」及忽略電池最佳化，軌跡可能不完整，定位校驗亦可能失敗。", confirmText: "仍然繼續", cancelText: "返回設定", onConfirm: finish }); }}>稍後設定</Button>
   </div>;
