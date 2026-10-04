@@ -1,19 +1,23 @@
-import { useEffect, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CloseOutlined, CloudUploadOutlined, DeleteOutlined, EditOutlined, ExportOutlined, HolderOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { BatchPickerDrawer, Button, ConfirmDialog, DenseTable, Field, FormDrawer, PageHeader, Pagination, Select, StatusTag, useToast } from "./components";
+import { getObject } from "./object-data";
+import { templateIdOfPlan } from "./plan-data";
 import { responsibilityGroups } from "./permission-rules";
+import { useDemo } from "./store";
 import {
-  ATTACHMENTS_MAX, checkPoints, DISTANCE_MAX, DISTANCE_MIN, groupItemsByCategory, initialTemplates, inspectionTypes, itemCatalog, moveCategory, moveItem, newTemplate,
-  normalizeItems, objectCatalog, validateTemplate,
+  ATTACHMENTS_MAX, checkPoints, DISTANCE_MAX, DISTANCE_MIN, groupItemsByCategory, moveCategory, moveItem, newTemplate,
+  normalizeItems, validateTemplate,
   type InspectionTemplate, type TemplateError, type TemplateItemSetting, type TemplateObjectSetting, type TemplateTab,
 } from "./inspection-templates";
 import type { Column } from "./types";
+import { catalogView } from "./item-data";
+import { sortItems } from "./item-rules";
 
 type Patch = Partial<InspectionTemplate>;
 const inspectionGroups = responsibilityGroups.filter((group) => group.kind === "巡查");
 const inspectionGroupIds = inspectionGroups.map((group) => group.id);
-const itemById = new Map(itemCatalog.map((item) => [item.id, item]));
-const objectById = new Map(objectCatalog.map((object) => [object.id, object]));
 const groupName = (id: string) => inspectionGroups.find((group) => group.id === id)?.name ?? id;
 const unique = (values: string[]) => [...new Set(values)];
 const contains = (value: string, query: string) => !query.trim() || value.toLowerCase().includes(query.trim().toLowerCase());
@@ -52,15 +56,19 @@ function ItemsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: (p
   const [armed, setArmed] = useState<string | null>(null); const [drag, setDrag] = useState<ItemDrag | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null); const [overGroup, setOverGroup] = useState<number | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null); const bodyRef = useRef<HTMLTableSectionElement>(null);
+  // The managed 巡查項目 (item-type order, then item order); existing selections keep resolving when an item is 失效, but only 生效 ones can be added.
+  const { items: managedItems, itemTypes } = useDemo();
+  const catalog = useMemo(() => { const sorted = sortItems(managedItems, [], itemTypes); return catalogView(sorted).map((item, index) => ({ ...item, active: sorted[index].status === "生效" })); }, [managedItems, itemTypes]);
+  const itemById = useMemo(() => new Map(catalog.map((item) => [item.id, item.active ? item : { ...item, name: `${item.name}（失效）` }])), [catalog]);
   const filtering = search.trim() !== "";
   let flatIndex = 0;
-  const groups = groupItemsByCategory(draft.items).map((group, groupIndex) => {
+  const groups = groupItemsByCategory(draft.items, catalog).map((group, groupIndex) => {
     const entries = group.settings.map((setting) => ({ setting, index: flatIndex++, item: itemById.get(setting.itemId) }));
     return { ...group, groupIndex, start: entries[0].index, end: entries[entries.length - 1].index, entries: entries.filter(({ item }) => item && (contains(item.name, search) || contains(item.code, search))) };
   });
   const visibleGroups = groups.filter((group) => group.entries.length);
   const { selected, allSelected, toggle, toggleMany, toggleAll, drop } = useSelection(visibleGroups.flatMap((group) => group.entries.map((entry) => entry.setting.itemId)));
-  const candidates = itemCatalog.filter((item) => item.inspectionType === draft.inspectionType && !draft.items.some((setting) => setting.itemId === item.id));
+  const candidates = catalog.filter((item) => item.active && item.inspectionType === draft.inspectionType && !draft.items.some((setting) => setting.itemId === item.id));
   useEffect(() => { if (focusKey) bodyRef.current?.querySelector<HTMLButtonElement>(`[data-handle="${focusKey}"]`)?.focus(); }, [focusKey, draft.items]);
   const update = (itemId: string, patch: Partial<TemplateItemSetting>) => onChange({ items: draft.items.map((setting) => setting.itemId === itemId ? { ...setting, ...patch } : setting) });
   const remove = (ids: string[]) => { onChange({ items: draft.items.filter((setting) => !ids.includes(setting.itemId)) }); drop(ids); };
@@ -74,10 +82,10 @@ function ItemsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: (p
   };
   const keyMoveGroup = (event: KeyboardEvent, groupIndex: number, category: string) => {
     const delta = arrow(event); if (!delta) return;
-    event.preventDefault(); onChange({ items: moveCategory(draft.items, groupIndex, groupIndex + delta) }); setFocusKey(`group:${category}`);
+    event.preventDefault(); onChange({ items: moveCategory(draft.items, groupIndex, groupIndex + delta, catalog) }); setFocusKey(`group:${category}`);
   };
   const dropOn = (groupIndex: number, index?: number) => {
-    if (drag?.kind === "group") onChange({ items: moveCategory(draft.items, drag.groupIndex, groupIndex) });
+    if (drag?.kind === "group") onChange({ items: moveCategory(draft.items, drag.groupIndex, groupIndex, catalog) });
     else if (drag?.kind === "item" && index !== undefined) onChange({ items: moveItem(draft.items, drag.index, index) });
     endDrag();
   };
@@ -89,7 +97,7 @@ function ItemsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: (p
     ? (edge === "header" && drag.groupIndex > groupIndex ? "drag-over-before" : edge === "last" && drag.groupIndex < groupIndex ? "drag-over-after" : "") : "";
   const itemLine = (index: number) => drag?.kind === "item" && overIndex === index && drag.index !== index ? (drag.index < index ? "drag-over-after" : "drag-over-before") : "";
   const startDrag = (event: DragEvent, next: ItemDrag) => { setDrag(next); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", JSON.stringify(next)); };
-  const add = (ids: string[]) => { onChange({ items: normalizeItems([...draft.items, ...itemCatalog.filter((item) => ids.includes(item.id)).map((item) => ({ itemId: item.id, required: true, minAttachments: 0 }))]) }); setPicker(false); };
+  const add = (ids: string[]) => { onChange({ items: normalizeItems([...draft.items, ...catalog.filter((item) => ids.includes(item.id)).map((item) => ({ itemId: item.id, required: true, minAttachments: 0 }))], catalog) }); setPicker(false); };
   const openBatchEdit = () => { setBatchRequired(""); setBatchAttachments(""); setBatchError(""); setBatchEdit(true); };
   const applyBatchEdit = () => {
     const attachments = toNumber(batchAttachments);
@@ -138,14 +146,18 @@ function ObjectsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: 
   const [search, setSearch] = useState(""); const [grid, setGrid] = useState("");
   const [picker, setPicker] = useState(false); const [batchEdit, setBatchEdit] = useState(false);
   const [batchDistance, setBatchDistance] = useState(""); const [batchError, setBatchError] = useState("");
+  const { objects: managed, grids } = useDemo();
+  // the managed objects: existing selections keep resolving even when disabled, but only active ones can be added
+  const catalog = useMemo(() => managed.map((object) => ({ id: object.id, code: object.code, name: object.status === "啟用" ? object.name : `${object.name}（停用）`, inspectionType: object.inspectionType, grid: getObject(object.id)?.grid ?? "未歸屬", address: object.address, active: object.status === "啟用" })), [managed, grids]); // eslint-disable-line react-hooks/exhaustive-deps
+  const objectById = useMemo(() => new Map(catalog.map((object) => [object.id, object])), [catalog]);
   const rows = draft.objects.map((setting) => ({ setting, object: objectById.get(setting.objectId) })).filter(({ object }) => object && (!grid || object.grid === grid) && (contains(object.name, search) || contains(object.code, search) || contains(object.address, search)));
   const { selected, allSelected, toggle, toggleAll, drop } = useSelection(rows.map((row) => row.setting.objectId));
-  const candidates = objectCatalog.filter((object) => object.inspectionType === draft.inspectionType && !draft.objects.some((setting) => setting.objectId === object.id));
-  const gridOptions = unique(objectCatalog.filter((object) => object.inspectionType === draft.inspectionType).map((object) => object.grid));
+  const candidates = catalog.filter((object) => object.active && object.inspectionType === draft.inspectionType && !draft.objects.some((setting) => setting.objectId === object.id));
+  const gridOptions = unique(catalog.filter((object) => object.inspectionType === draft.inspectionType).map((object) => object.grid));
   const defaultText = draft.validDistance ?? "—";
   const update = (objectId: string, patch: Partial<TemplateObjectSetting>) => onChange({ objects: draft.objects.map((setting) => setting.objectId === objectId ? { ...setting, ...patch } : setting) });
   const remove = (ids: string[]) => { onChange({ objects: draft.objects.filter((setting) => !ids.includes(setting.objectId)) }); drop(ids); };
-  const add = (ids: string[]) => { onChange({ objects: [...draft.objects, ...objectCatalog.filter((object) => ids.includes(object.id)).map((object) => ({ objectId: object.id, distance: null }))] }); setPicker(false); };
+  const add = (ids: string[]) => { onChange({ objects: [...draft.objects, ...catalog.filter((object) => ids.includes(object.id)).map((object) => ({ objectId: object.id, distance: null }))] }); setPicker(false); };
   const openBatchEdit = () => { setBatchDistance(""); setBatchError(""); setBatchEdit(true); };
   const applyBatchEdit = () => {
     const distance = toNumber(batchDistance);
@@ -185,20 +197,25 @@ function GroupsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: (
 }
 
 function BasicTab({ draft, onChange, onSubmit }: { draft: InspectionTemplate; onChange: (patch: Patch) => void; onSubmit: () => void }) {
+  // Plans using this template (each plan keeps its own snapshot); open ones are 未開始 or 進行中.
+  const { plans } = useDemo();
+  const planRefs = draft.id ? plans.filter((plan) => templateIdOfPlan(plan) === draft.id) : [];
+  const openRefs = planRefs.filter((plan) => plan.status === "未開始" || plan.status === "進行中");
+  const { inspectionTypes: typeRecords } = useDemo();
   const isNew = !draft.id;
   const [pendingType, setPendingType] = useState<string | null>(null); const [confirmDisable, setConfirmDisable] = useState(false);
   const changeType = (inspectionType: string) => {
     if (inspectionType === draft.inspectionType) return;
     if (draft.items.length || draft.objects.length) setPendingType(inspectionType); else onChange({ inspectionType });
   };
-  const changeStatus = (active: boolean) => { if (!active && draft.planTemplateRefs > 0) setConfirmDisable(true); else onChange({ status: active ? "生效" : "失效" }); };
+  const changeStatus = (active: boolean) => { if (!active && openRefs.length > 0) setConfirmDisable(true); else onChange({ status: active ? "生效" : "失效" }); };
   const toggleCheckPoint = (point: string) => onChange({ checkOn: checkPoints.filter((item) => item === point ? !draft.checkOn.includes(item) : draft.checkOn.includes(item)) });
   const submit = (event: FormEvent) => { event.preventDefault(); onSubmit(); };
   return <form className="tpl-basic-form" onSubmit={submit}>
     <section className="group-editor-section"><header><h3>模板資料</h3></header><div className="group-editor-grid">
       <Field label="編號" required hint="唯一，儲存後不可修改"><input value={draft.code} disabled={!isNew} onChange={(event) => onChange({ code: event.target.value })} placeholder="例如 TPL007" /></Field>
       <Field label="模板名稱" required hint="1–50 字，同一巡查類型內唯一"><input value={draft.name} maxLength={50} onChange={(event) => onChange({ name: event.target.value })} placeholder="請輸入模板名稱" /></Field>
-      <Field label="巡查類型" required hint={isNew ? "項目及對象只可選同類型記錄" : "建立後不可修改"}>{isNew ? <Select ariaLabel="巡查類型" value={draft.inspectionType} onChange={changeType}><option value="">請選擇巡查類型</option>{inspectionTypes.map((type) => <option key={type}>{type}</option>)}</Select> : <input value={draft.inspectionType} disabled />}</Field>
+      <Field label="巡查類型" required hint={isNew ? "項目及對象只可選同類型記錄" : "建立後不可修改"}>{isNew ? <Select ariaLabel="巡查類型" value={draft.inspectionType} onChange={changeType}><option value="">請選擇巡查類型</option>{typeRecords.filter((type) => type.status === "生效").map((type) => <option key={type.id}>{type.name}</option>)}</Select> : <input value={draft.inspectionType} disabled />}</Field>
       <Field label="巡查要求"><textarea rows={4} value={draft.description} onChange={(event) => onChange({ description: event.target.value })} placeholder="說明巡查要求、作業步驟、輸入規範及附件要求" /></Field>
     </div></section>
     <section className="group-editor-section"><header><h3>定位檢查</h3></header><div className="group-editor-grid tpl-location-grid">
@@ -207,10 +224,10 @@ function BasicTab({ draft, onChange, onSubmit }: { draft: InspectionTemplate; on
       <fieldset className="bip-field tpl-check-points" disabled={!draft.locationCheck}><legend>{draft.locationCheck && <b>*</b>}檢查時點</legend><div>{checkPoints.map((point) => <label key={point}><input type="checkbox" checked={draft.checkOn.includes(point)} onChange={() => toggleCheckPoint(point)} /><span>{point}</span></label>)}</div></fieldset>
       <p className="tpl-hint tpl-location-hint">巡查員須位於對象的有效距離範圍內，才可在所選時點開始填寫或提交巡查。</p>
     </div></section>
-    <section className="group-editor-section"><header><h3>模板狀態</h3></header><div className="group-editor-status"><div className="bip-field"><span>狀態</span><div className="switch-row"><label className="switch-control"><input type="checkbox" aria-label="模板生效" checked={draft.status === "生效"} onChange={(event) => changeStatus(event.target.checked)} /><span className="switch" /></label></div></div><div className="group-editor-count"><span>引用中計劃模板</span><strong>{draft.planTemplateRefs}</strong></div></div></section>
+    <section className="group-editor-section"><header><h3>模板狀態</h3></header><div className="group-editor-status"><div className="bip-field"><span>狀態</span><div className="switch-row"><label className="switch-control"><input type="checkbox" aria-label="模板生效" checked={draft.status === "生效"} onChange={(event) => changeStatus(event.target.checked)} /><span className="switch" /></label></div></div><div className="group-editor-count"><span>使用中的巡查計劃（共 {planRefs.length} 個）</span><strong>{openRefs.length}</strong></div></div></section>
     <button type="submit" className="sr-only">儲存</button>
     <ConfirmDialog open={pendingType !== null} title="更改巡查類型？" message={`巡查項目及對象只可選同類型記錄，更改後將移除已加入的 ${draft.items.length} 個項目及 ${draft.objects.length} 個對象。`} danger confirmLabel="確認更改" onCancel={() => setPendingType(null)} onConfirm={() => { onChange({ inspectionType: pendingType ?? "", items: [], objects: [] }); setPendingType(null); }} />
-    <ConfirmDialog open={confirmDisable} title="停用巡查模板？" message={`此模板正被 ${draft.planTemplateRefs} 個啟用中的計劃模板引用。停用後不可再被新計劃選用，已生成的巡查不受影響。`} danger confirmLabel="確認停用" onCancel={() => setConfirmDisable(false)} onConfirm={() => { onChange({ status: "失效" }); setConfirmDisable(false); }} />
+    <ConfirmDialog open={confirmDisable} title="停用巡查模板？" message={`此模板正被 ${openRefs.length} 個未開始或進行中的巡查計劃使用。停用後不可再用於新計劃及新巡查；這些計劃沿用建立時的模板快照，已生成的巡查不受影響。`} danger confirmLabel="確認停用" onCancel={() => setConfirmDisable(false)} onConfirm={() => { onChange({ status: "失效" }); setConfirmDisable(false); }} />
   </form>;
 }
 
@@ -232,10 +249,11 @@ function TemplateEditor({ draft, tab, errors, onTab, onChange, onSubmit }: { dra
 
 export function InspectionTemplatesPage() {
   const { showToast } = useToast();
-  const [templates, setTemplates] = useState<InspectionTemplate[]>(() => structuredClone(initialTemplates));
+  const { inspectionTemplates: templates, saveInspectionTemplates, objects: managedObjects, inspectionTypes: typeRecords, items: managedItems } = useDemo();
   const [filters, setFilters] = useState<TemplateFilters>(emptyFilters);
   const [page, setPage] = useState(1); const [pageSize, setPageSize] = useState(15);
-  const [draft, setDraft] = useState<InspectionTemplate | null>(null); const [tab, setTab] = useState<TemplateTab>("basic"); const [errors, setErrors] = useState<TemplateError[]>([]);
+  const [params] = useSearchParams(); // ?template=ID opens that template (linked from plan detail)
+  const [draft, setDraft] = useState<InspectionTemplate | null>(() => { const linked = templates.find((item) => item.id === params.get("template")); return linked ? structuredClone(linked) : null; }); const [tab, setTab] = useState<TemplateTab>("basic"); const [errors, setErrors] = useState<TemplateError[]>([]);
   const filter = (key: keyof TemplateFilters, value: string) => { setFilters((current) => ({ ...current, [key]: value })); setPage(1); };
   const rows = templates.filter((template) => contains(template.code, filters.code) && contains(template.name, filters.name) && (!filters.type || template.inspectionType === filters.type)
     && (!filters.location || (template.locationCheck ? "開啟" : "關閉") === filters.location) && (!filters.status || template.status === filters.status));
@@ -244,10 +262,10 @@ export function InspectionTemplatesPage() {
   const save = () => {
     if (!draft) return;
     const template: InspectionTemplate = { ...draft, code: draft.code.trim(), name: draft.name.trim(), description: draft.description.trim() };
-    const found = validateTemplate(template, templates, inspectionGroupIds);
+    const found = validateTemplate(template, templates, inspectionGroupIds, managedObjects, typeRecords.map((type) => type.name), catalogView(managedItems));
     if (found.length) { setErrors(found); if (!found.some((error) => error.tab === tab)) setTab(found[0].tab); return; }
     const saved: InspectionTemplate = { ...template, id: template.id || `TPL-${Date.now()}`, updatedBy: "陳家朗", updatedAt: nowText() };
-    setTemplates((current) => current.some((item) => item.id === saved.id) ? current.map((item) => item.id === saved.id ? saved : item) : [saved, ...current]);
+    saveInspectionTemplates(templates.some((item) => item.id === saved.id) ? templates.map((item) => item.id === saved.id ? saved : item) : [saved, ...templates]);
     setDraft(null);
     showToast(template.id ? "巡查模板已更新" : "巡查模板已建立");
   };
@@ -271,7 +289,7 @@ export function InspectionTemplatesPage() {
       <div className="filter-bar tpl-filter-bar">
         <label className="filter-field"><span>編號</span><input aria-label="編號" value={filters.code} onChange={(event) => filter("code", event.target.value)} placeholder="請輸入編號" /></label>
         <label className="filter-field"><span>名稱</span><input aria-label="名稱" value={filters.name} onChange={(event) => filter("name", event.target.value)} placeholder="請輸入名稱" /></label>
-        <label className="filter-field"><span>巡查類型</span><Select ariaLabel="巡查類型" value={filters.type} onChange={(value) => filter("type", value)}><option value="">全部巡查類型</option>{inspectionTypes.map((type) => <option key={type}>{type}</option>)}</Select></label>
+        <label className="filter-field"><span>巡查類型</span><Select ariaLabel="巡查類型" value={filters.type} onChange={(value) => filter("type", value)}><option value="">全部巡查類型</option>{typeRecords.map((type) => <option key={type.id}>{type.name}</option>)}</Select></label>
         <label className="filter-field"><span>定位檢查</span><Select ariaLabel="定位檢查" value={filters.location} onChange={(value) => filter("location", value)}><option value="">全部</option><option>開啟</option><option>關閉</option></Select></label>
         <label className="filter-field"><span>狀態</span><Select ariaLabel="狀態" value={filters.status} onChange={(value) => filter("status", value)}><option value="">全部狀態</option><option>生效</option><option>失效</option></Select></label>
         <div className="user-filter-actions"><Button variant="text" icon={<ReloadOutlined />} onClick={() => { setFilters(emptyFilters); setPage(1); }}>重設</Button></div>

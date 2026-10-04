@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
 import { CloseOutlined, CloudUploadOutlined, EditOutlined, EnvironmentFilled, ExportOutlined, FileImageOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { Button, DenseTable, Field, FormDrawer, PageHeader, Pagination, Select, StatusTag, useToast } from "./components";
-import { genericDatasets } from "./data";
+import { reverseGeocodeParts } from "./event-data";
+import { lngLatToPx } from "./grid-rules";
 import { departments, responsibilityGroups } from "./permission-rules";
-import { fromMapPercent, initialNfcTags, NFC_MAX_PHOTOS, newNfcTag, toMapPercent, validateNfcTag, type NfcPhoto, type NfcTag } from "./nfc-tags";
+import { fromMapPercent, initialNfcTags, NFC_MAX_PHOTOS, newNfcTag, toMapPercent, validateNfcTag, type NfcAddressParts, type NfcPhoto, type NfcTag } from "./nfc-tags";
+import { composeAddress } from "./object-rules";
+import { useDemo } from "./store";
 import type { Column } from "./types";
 
 const mapImageUrl = `${import.meta.env.BASE_URL}assets/macau-operations-map.png`;
 const managementGroups = responsibilityGroups.filter((group) => group.kind === "管理");
 const managementGroupIds = managementGroups.map((group) => group.id);
 const childDepartments = departments.filter((department) => department !== "市政署");
-const objectOptions = genericDatasets.objects;
 const groupName = (id: string) => managementGroups.find((group) => group.id === id)?.name ?? "—";
-const objectName = (id?: string) => objectOptions.find((object) => object.id === id)?.name ?? "—";
 const coordinate = (value: number | null) => value === null ? "—" : value.toFixed(6);
 const contains = (value: string, query: string) => !query.trim() || value.toLowerCase().includes(query.trim().toLowerCase());
 const nowText = () => { const d = new Date(); const pad = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -60,9 +61,17 @@ function NfcPhotos({ photos, onChange }: { photos: NfcPhoto[]; onChange: (photos
 
 function NfcEditor({ draft, errors, onChange, onSubmit }: { draft: NfcTag; errors: string[]; onChange: (patch: Partial<NfcTag>) => void; onSubmit: () => void }) {
   const errorRef = useRef<HTMLDivElement>(null);
+  const { objects } = useDemo();
+  // the managed objects: only active ones are offered, plus the one already linked
+  const objectOptions = objects.filter((object) => object.status === "啟用" || object.id === draft.objectId);
   useEffect(() => { if (errors.length) errorRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [errors]);
   const isNew = !draft.id;
   const toNumber = (value: string) => value === "" ? null : Number(value);
+  const setPart = (key: keyof NfcAddressParts, value: string) => { const addressParts = { ...draft.addressParts, [key]: value }; onChange({ addressParts, address: composeAddress(addressParts) }); };
+  const pick = (point: { lat: number; lng: number }) => {
+    const [x, y] = lngLatToPx([point.lng, point.lat]); const located = reverseGeocodeParts(x, y);
+    onChange(located.parts ? { ...point, addressParts: located.parts, address: composeAddress(located.parts) } : point);
+  };
   const submit = (event: FormEvent) => { event.preventDefault(); onSubmit(); };
   return <form className="group-editor-form" onSubmit={submit}>
     {errors.length > 0 && <div ref={errorRef} className="nfc-editor-error" role="alert">{errors.join(" ")}</div>}
@@ -75,11 +84,14 @@ function NfcEditor({ draft, errors, onChange, onSubmit }: { draft: NfcTag; error
       <Field label="關聯對象" hint="掃描此標籤可作輔助到場紀錄，不作強制"><Select ariaLabel="關聯對象" value={draft.objectId ?? ""} onChange={(objectId) => onChange({ objectId: objectId || undefined })}><option value="">不關聯對象</option>{objectOptions.map((object) => <option key={object.id} value={object.id}>{object.code} · {object.name}</option>)}</Select></Field>
     </div></section>
     <section className="group-editor-section"><header><h3>位置資料</h3></header><div className="group-editor-grid">
-      <Field label="設施名稱" required><input value={draft.facility} maxLength={100} onChange={(event) => onChange({ facility: event.target.value })} placeholder="請輸入設施名稱" /></Field>
-      <Field label="地址" required><input value={draft.address} onChange={(event) => onChange({ address: event.target.value })} placeholder="請輸入地址" /></Field>
-      <Field label="緯度" required><input type="number" step="0.000001" inputMode="decimal" value={draft.lat ?? ""} onChange={(event) => onChange({ lat: toNumber(event.target.value) })} placeholder="例如 22.211250" /></Field>
-      <Field label="經度" required><input type="number" step="0.000001" inputMode="decimal" value={draft.lng ?? ""} onChange={(event) => onChange({ lng: toNumber(event.target.value) })} placeholder="例如 113.555850" /></Field>
-      <div className="field nfc-map-row"><span>地圖選點</span><NfcMapPicker lat={draft.lat} lng={draft.lng} onPick={onChange} /></div>
+      <div className="nfc-location-name"><Field label="名稱" required><input value={draft.facility} maxLength={100} onChange={(event) => onChange({ facility: event.target.value })} placeholder="請輸入名稱" /></Field></div>
+      <div className="nfc-coordinate-row"><Field label="緯度" required><input type="number" step="0.000001" inputMode="decimal" value={draft.lat ?? ""} onChange={(event) => onChange({ lat: toNumber(event.target.value) })} placeholder="例如 22.211250" /></Field><Field label="經度" required><input type="number" step="0.000001" inputMode="decimal" value={draft.lng ?? ""} onChange={(event) => onChange({ lng: toNumber(event.target.value) })} placeholder="例如 113.555850" /></Field></div>
+      <div className="field obj-address-parts"><span>結構化地址</span><div className="obj-parts-grid">
+        <input aria-label="堂區" value={draft.addressParts.parish} onChange={(event) => setPart("parish", event.target.value)} placeholder="堂區" /><input aria-label="街道" value={draft.addressParts.street} onChange={(event) => setPart("street", event.target.value)} placeholder="街道" />
+        <input aria-label="門牌" value={draft.addressParts.number} onChange={(event) => setPart("number", event.target.value)} placeholder="門牌" /><input aria-label="建築物" value={draft.addressParts.building} onChange={(event) => setPart("building", event.target.value)} placeholder="建築物" /></div>
+        <small>填寫各部分會組成下方地址。</small></div>
+      <Field label="地址" required hint="1–300 字，可直接修改"><input value={draft.address} maxLength={300} onChange={(event) => onChange({ address: event.target.value })} placeholder="請輸入地址" /></Field>
+      <div className="field nfc-map-row"><span>地圖選點</span><NfcMapPicker lat={draft.lat} lng={draft.lng} onPick={pick} /></div>
     </div></section>
     <section className="group-editor-section"><header><h3>現場照片</h3></header><NfcPhotos photos={draft.photos} onChange={(photos) => onChange({ photos })} /></section>
     <section className="group-editor-section"><header><h3>標籤狀態</h3></header><div className="group-editor-status"><div className="bip-field"><span>狀態</span><div className="switch-row"><label className="switch-control"><input type="checkbox" aria-label="標籤生效" checked={draft.status === "生效"} onChange={(event) => onChange({ status: event.target.checked ? "生效" : "失效" })} /><span className="switch" /></label></div></div><div className="group-editor-count"><span>累計掃描次數</span><strong>{draft.scanCount}</strong></div></div></section>
@@ -88,6 +100,8 @@ function NfcEditor({ draft, errors, onChange, onSubmit }: { draft: NfcTag; error
 }
 
 export function NfcTagsPage() {
+  const { objects: managedObjects } = useDemo();
+  const objectName = (id?: string) => managedObjects.find((object) => object.id === id)?.name ?? "—";
   const { showToast } = useToast();
   const [tags, setTags] = useState<NfcTag[]>(() => structuredClone(initialNfcTags));
   const [filters, setFilters] = useState<NfcFilters>(emptyFilters);

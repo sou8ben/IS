@@ -6,6 +6,7 @@ import {
   ReloadOutlined, SearchOutlined, SortAscendingOutlined, SortDescendingOutlined, UploadOutlined, WarningFilled,
 } from "@ant-design/icons";
 import type { Column, GenericRecord, StatusTone } from "./types";
+import { groupCategories } from "./group-catalog";
 
 const mapImageUrl = `${import.meta.env.BASE_URL}assets/macau-operations-map.png`;
 
@@ -119,15 +120,15 @@ export function Pagination({ total, page = 1, pageSize = 15, onPageChange, onPag
   return <div className="pagination"><span>共 {total} 筆</span><div className="pagination-controls"><Button icon={<LeftOutlined />} disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)}>上一頁</Button><span className="page-indicator">第 <strong>{currentPage}</strong> / {totalPages} 頁</span><Button iconAfter={<RightOutlined />} disabled={currentPage === totalPages} onClick={() => changePage(currentPage + 1)}>下一頁</Button><Select value={String(pageSize)} onChange={(value) => onPageSizeChange?.(Number(value))} ariaLabel="每頁筆數"><option>15</option><option>30</option><option>50</option><option>100</option></Select><form className="pagination-jump" onSubmit={submitPage}><span>跳至</span><input aria-label="輸入頁數" inputMode="numeric" pattern="[0-9]*" value={pageInput} onChange={(event) => setPageInput(event.target.value)} />頁</form></div></div>;
 }
 
-export function FormDrawer({ open, title, subtitle, children, onClose, onSubmit, submitLabel = "儲存", className = "" }: {
-  open: boolean; title: string; subtitle?: string; children: ReactNode; onClose: () => void; onSubmit?: () => void; submitLabel?: string; className?: string;
+export function FormDrawer({ open, title, subtitle, children, onClose, onSubmit, submitLabel = "儲存", cancelLabel = "取消", className = "" }: {
+  open: boolean; title: string; subtitle?: string; children: ReactNode; onClose: () => void; onSubmit?: () => void; submitLabel?: string; /** e.g. 關閉 for a read-only drawer */ cancelLabel?: string; className?: string;
 }) {
   if (!open) return null;
   return <div className="overlay" role="presentation" onMouseDown={onClose}>
     <aside className={`drawer ${className}`} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}>
       <header><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button aria-label="關閉" onClick={onClose}><CloseOutlined /></button></header>
       <div className="drawer-body">{children}</div>
-      <footer><Button onClick={onClose}>取消</Button>{onSubmit && <Button variant="primary" onClick={onSubmit}>{submitLabel}</Button>}</footer>
+      <footer><Button onClick={onClose}>{cancelLabel}</Button>{onSubmit && <Button variant="primary" onClick={onSubmit}>{submitLabel}</Button>}</footer>
     </aside>
   </div>;
 }
@@ -143,10 +144,10 @@ export function ConfirmDialog({ open, title, message, confirmLabel = "確認", d
   </div></div>;
 }
 
-export function TreePanel({ title, nodes, active, onChange }: { title: string; nodes: string[]; active: string; onChange: (value: string) => void }) {
+export function TreePanel({ title, nodes, counts, active, onChange }: { title: string; nodes: string[]; counts?: Record<string, number>; active: string; onChange: (value: string) => void }) {
   return <aside className="tree-panel"><div className="tree-title"><strong>{title}</strong></div>
     <div className="tree-search"><SearchOutlined /><input placeholder={`搜尋${title}`} /></div>
-    <nav>{nodes.map((node, index) => <button key={node} className={node === active ? "active" : ""} onClick={() => onChange(node)}><span className="tree-dot" />{node}<span>{index + 2}</span></button>)}</nav>
+    <nav>{nodes.map((node, index) => <button key={node} className={node === active ? "active" : ""} onClick={() => onChange(node)}><span className="tree-dot" />{node}<span>{counts ? counts[node] ?? 0 : index + 2}</span></button>)}</nav>
   </aside>;
 }
 
@@ -323,6 +324,7 @@ export function GroupEditor({ record, onSave }: { record?: GenericRecord; onSave
     {activeTab === "details" && <><section className="group-editor-section"><header><div><h3>群組資料</h3></div></header><div className="group-editor-grid">
       <Field label="編號" required hint="儲存後不可修改"><input defaultValue={record?.code} placeholder="系統可自動產生" /></Field>
       <Field label="名稱" required><input defaultValue={record?.name} placeholder="請輸入群組名稱" /></Field>
+      <Field label="群組分類" required><Select ariaLabel="群組分類" value={record?.category ?? groupCategories[0]} onChange={() => undefined}>{groupCategories.map((category) => <option key={category}>{category}</option>)}</Select></Field>
       <Field label="附屬部門" required><Select value={record?.owner ?? "市政管理廳"} onChange={() => undefined}><option>市政管理廳</option><option>環境衛生處</option><option>園林綠化處</option><option>資訊處</option></Select></Field>
       <Field label="群組說明"><textarea defaultValue={record?.note} placeholder="請輸入群組說明" rows={4} /></Field>
     </div></section>

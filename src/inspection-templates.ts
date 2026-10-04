@@ -21,7 +21,6 @@ export interface InspectionTemplate {
   objects: TemplateObjectSetting[];
   groups: string[];
   status: "生效" | "失效";
-  planTemplateRefs: number;
   updatedBy: string;
   updatedAt: string;
 }
@@ -113,16 +112,16 @@ const opt = (itemId: string, minAttachments = 0): TemplateItemSetting => ({ item
 const obj = (objectId: string, distance: number | null = null): TemplateObjectSetting => ({ objectId, distance });
 
 export const initialTemplates: InspectionTemplate[] = [
-  { id: "TPL001", code: "TPL001", name: "公園設施標準巡查表", inspectionType: "公園設施巡查", description: "按順序檢查座椅、照明、遊樂設施及衛生狀況；發現異常須拍照並建立工作，完成後由管理處人員簽名確認。", locationCheck: true, validDistance: 100, checkOn: ["開始填寫", "提交"], items: [req("ITEM-001"), req("ITEM-006", 1), opt("ITEM-008"), req("ITEM-009"), req("ITEM-002"), req("ITEM-003"), opt("ITEM-007", 2)], objects: [obj("OBJ-001"), obj("OBJ-003"), obj("OBJ-013", 50), obj("OBJ-007")], groups: ["inspect-north"], status: "生效", planTemplateRefs: 2, updatedBy: "陳家朗", updatedAt: "2026-09-29 10:20" },
-  { id: "TPL002", code: "TPL002", name: "街道環境標準巡查表", inspectionType: "街道環境巡查", description: "沿步行路線檢查路面、垃圾堆積及標示狀況。", locationCheck: true, validDistance: 100, checkOn: ["提交"], items: [req("ITEM-012"), req("ITEM-013"), req("ITEM-005"), opt("ITEM-014")], objects: [], groups: ["inspect-middle"], status: "生效", planTemplateRefs: 1, updatedBy: "系統管理員", updatedAt: "2026-09-28 15:42" },
-  { id: "TPL003", code: "TPL003", name: "綠化設施巡查表", inspectionType: "綠化設施巡查", description: "檢查樹木健康、阻礙通行及灌溉系統；病蟲害須附相片。", locationCheck: true, validDistance: 150, checkOn: ["提交"], items: [req("ITEM-024", 1), req("ITEM-025"), opt("ITEM-026"), opt("ITEM-027", 1), opt("ITEM-004")], objects: [obj("OBJ-006", 300), obj("OBJ-027")], groups: ["inspect-island"], status: "生效", planTemplateRefs: 1, updatedBy: "李芷晴", updatedAt: "2026-09-27 11:05" },
-  { id: "TPL004", code: "TPL004", name: "海濱設施巡查表", inspectionType: "海濱設施巡查", description: "檢查欄杆、救生圈及照明設施。", locationCheck: true, validDistance: 100, checkOn: ["提交"], items: [req("ITEM-018"), req("ITEM-019"), opt("ITEM-021"), req("ITEM-020")], objects: [obj("OBJ-005"), obj("OBJ-020")], groups: [], status: "生效", planTemplateRefs: 0, updatedBy: "陳家朗", updatedAt: "2026-09-26 09:48" },
-  { id: "TPL005", code: "TPL005", name: "公共廁所巡查表", inspectionType: "公共廁所巡查", description: "檢查清潔、洗手液及通風設備；地面不潔須附相片。", locationCheck: true, validDistance: 50, checkOn: ["開始填寫", "提交"], items: [req("ITEM-029", 1), req("ITEM-030"), req("ITEM-031"), opt("ITEM-032"), req("ITEM-033")], objects: [], groups: [], status: "失效", planTemplateRefs: 0, updatedBy: "黃志峰", updatedAt: "2026-09-24 16:30" },
-  { id: "TPL006", code: "TPL006", name: "公園夜間照明巡查表", inspectionType: "公園設施巡查", description: "夜間檢查照明及告示牌，車巡為主，不作定位檢查。", locationCheck: false, validDistance: 100, checkOn: [], items: [req("ITEM-002", 1), opt("ITEM-011"), opt("ITEM-008")], objects: [obj("OBJ-001"), obj("OBJ-011")], groups: ["inspect-north", "inspect-island"], status: "生效", planTemplateRefs: 0, updatedBy: "陳家朗", updatedAt: "2026-09-25 20:15" },
+  { id: "TPL001", code: "TPL001", name: "公園設施標準巡查表", inspectionType: "公園設施巡查", description: "按順序檢查座椅、照明、遊樂設施及衛生狀況；發現異常須拍照並建立工作，完成後由管理處人員簽名確認。", locationCheck: true, validDistance: 100, checkOn: ["開始填寫", "提交"], items: [req("ITEM-001"), req("ITEM-006", 1), opt("ITEM-008"), req("ITEM-009"), req("ITEM-002"), req("ITEM-003"), opt("ITEM-007", 2)], objects: [], groups: ["inspect-north"], status: "生效", updatedBy: "陳家朗", updatedAt: "2026-09-29 10:20" },
+  { id: "TPL002", code: "TPL002", name: "街道環境標準巡查表", inspectionType: "街道環境巡查", description: "沿步行路線檢查路面、垃圾堆積及標示狀況。", locationCheck: true, validDistance: 100, checkOn: ["提交"], items: [req("ITEM-012"), req("ITEM-013"), req("ITEM-005"), opt("ITEM-014")], objects: [], groups: ["inspect-middle"], status: "生效", updatedBy: "系統管理員", updatedAt: "2026-09-28 15:42" },
+  { id: "TPL003", code: "TPL003", name: "綠化設施巡查表", inspectionType: "綠化設施巡查", description: "檢查樹木健康、阻礙通行及灌溉系統；病蟲害須附相片。", locationCheck: true, validDistance: 150, checkOn: ["提交"], items: [req("ITEM-024", 1), req("ITEM-025"), opt("ITEM-026"), opt("ITEM-027", 1), opt("ITEM-004")], objects: [obj("OBJ-006", 300), obj("OBJ-027")], groups: ["inspect-island"], status: "生效", updatedBy: "李芷晴", updatedAt: "2026-09-27 11:05" },
+  { id: "TPL004", code: "TPL004", name: "海濱設施巡查表", inspectionType: "海濱設施巡查", description: "檢查欄杆、救生圈及照明設施。", locationCheck: true, validDistance: 100, checkOn: ["提交"], items: [req("ITEM-018"), req("ITEM-019"), opt("ITEM-021"), req("ITEM-020")], objects: [], groups: [], status: "生效", updatedBy: "陳家朗", updatedAt: "2026-09-26 09:48" },
+  { id: "TPL005", code: "TPL005", name: "公共廁所巡查表", inspectionType: "公共廁所巡查", description: "檢查清潔、洗手液及通風設備；地面不潔須附相片。", locationCheck: true, validDistance: 50, checkOn: ["開始填寫", "提交"], items: [req("ITEM-029", 1), req("ITEM-030"), req("ITEM-031"), opt("ITEM-032"), req("ITEM-033")], objects: [], groups: [], status: "失效", updatedBy: "黃志峰", updatedAt: "2026-09-24 16:30" },
+  { id: "TPL006", code: "TPL006", name: "公園夜間照明巡查表", inspectionType: "公園設施巡查", description: "夜間檢查照明及告示牌，車巡為主，不作定位檢查。", locationCheck: false, validDistance: 100, checkOn: [], items: [req("ITEM-002", 1), opt("ITEM-011"), opt("ITEM-008")], objects: [obj("OBJ-001"), obj("OBJ-011")], groups: ["inspect-north", "inspect-island"], status: "生效", updatedBy: "陳家朗", updatedAt: "2026-09-25 20:15" },
 ];
 
 export function newTemplate(): InspectionTemplate {
-  return { id: "", code: "", name: "", inspectionType: "", description: "", locationCheck: true, validDistance: 100, checkOn: ["提交"], items: [], objects: [], groups: [], status: "生效", planTemplateRefs: 0, updatedBy: "", updatedAt: "" };
+  return { id: "", code: "", name: "", inspectionType: "", description: "", locationCheck: true, validDistance: 100, checkOn: ["提交"], items: [], objects: [], groups: [], status: "生效", updatedBy: "", updatedAt: "" };
 }
 
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
@@ -135,15 +134,16 @@ export function moveItem<T>(list: T[], from: number, to: number): T[] {
 
 export interface ItemCategoryGroup { category: string; settings: TemplateItemSetting[] }
 
-export function categoryOf(itemId: string): string {
-  return itemCatalog.find((entry) => entry.id === itemId)?.category ?? "未分類";
+// The `catalog` parameters default to the built-in list; the app passes the managed 巡查項目 (see item-data.catalogView).
+export function categoryOf(itemId: string, catalog: CatalogItem[] = itemCatalog): string {
+  return catalog.find((entry) => entry.id === itemId)?.category ?? "未分類";
 }
 
 /** Items grouped by 項目類型, groups in order of first appearance. */
-export function groupItemsByCategory(items: TemplateItemSetting[]): ItemCategoryGroup[] {
+export function groupItemsByCategory(items: TemplateItemSetting[], catalog: CatalogItem[] = itemCatalog): ItemCategoryGroup[] {
   const groups: ItemCategoryGroup[] = [];
   for (const setting of items) {
-    const category = categoryOf(setting.itemId);
+    const category = categoryOf(setting.itemId, catalog);
     const group = groups.find((entry) => entry.category === category);
     if (group) group.settings.push(setting); else groups.push({ category, settings: [setting] });
   }
@@ -151,12 +151,12 @@ export function groupItemsByCategory(items: TemplateItemSetting[]): ItemCategory
 }
 
 /** Keeps items of the same category adjacent; new items join the end of their category. */
-export function normalizeItems(items: TemplateItemSetting[]): TemplateItemSetting[] {
-  return groupItemsByCategory(items).flatMap((group) => group.settings);
+export function normalizeItems(items: TemplateItemSetting[], catalog: CatalogItem[] = itemCatalog): TemplateItemSetting[] {
+  return groupItemsByCategory(items, catalog).flatMap((group) => group.settings);
 }
 
-export function moveCategory(items: TemplateItemSetting[], from: number, to: number): TemplateItemSetting[] {
-  return moveItem(groupItemsByCategory(items), from, to).flatMap((group) => group.settings);
+export function moveCategory(items: TemplateItemSetting[], from: number, to: number, catalog: CatalogItem[] = itemCatalog): TemplateItemSetting[] {
+  return moveItem(groupItemsByCategory(items, catalog), from, to).flatMap((group) => group.settings);
 }
 
 /** Effective distance for one object, or null when the template has no location check. */
@@ -167,7 +167,7 @@ export function effectiveDistance(template: InspectionTemplate, objectId: string
 
 const isIntIn = (value: number | null, min: number, max: number) => value !== null && Number.isInteger(value) && value >= min && value <= max;
 
-export function validateTemplate(template: InspectionTemplate, all: InspectionTemplate[], allowedGroupIds: string[]): TemplateError[] {
+export function validateTemplate(template: InspectionTemplate, all: InspectionTemplate[], allowedGroupIds: string[], objects: { id: string; inspectionType: string }[] = objectCatalog, types: string[] = inspectionTypes, catalog: CatalogItem[] = itemCatalog): TemplateError[] {
   const errors: TemplateError[] = [];
   const add = (tab: TemplateTab, message: string) => errors.push({ tab, message });
   const others = all.filter((item) => item.id !== template.id);
@@ -178,7 +178,7 @@ export function validateTemplate(template: InspectionTemplate, all: InspectionTe
   else if ([...name].length > 50) add("basic", "模板名稱不可超過 50 字。");
   else if (template.inspectionType && others.some((item) => item.inspectionType === template.inspectionType && item.name.trim() === name)) add("basic", `「${template.inspectionType}」已有同名模板「${name}」。`);
   if (!template.inspectionType) add("basic", "請選擇巡查類型。");
-  else if (!inspectionTypes.includes(template.inspectionType)) add("basic", "巡查類型不存在。");
+  else if (!types.includes(template.inspectionType)) add("basic", "巡查類型不存在。");
   if (template.locationCheck) {
     if (!isIntIn(template.validDistance, DISTANCE_MIN, DISTANCE_MAX)) add("basic", `有效距離須為 ${DISTANCE_MIN}–${DISTANCE_MAX} 米的整數。`);
     if (!template.checkOn.length) add("basic", "定位檢查開啟時須選擇至少一個檢查時點。");
@@ -186,13 +186,13 @@ export function validateTemplate(template: InspectionTemplate, all: InspectionTe
   if (!template.items.length) add("items", "模板至少需要 1 個巡查項目。");
   const itemIds = template.items.map((setting) => setting.itemId);
   if (new Set(itemIds).size !== itemIds.length) add("items", "巡查項目不可重複加入。");
-  const foreignItems = template.items.filter((setting) => itemCatalog.find((entry) => entry.id === setting.itemId)?.inspectionType !== template.inspectionType);
+  const foreignItems = template.items.filter((setting) => catalog.find((entry) => entry.id === setting.itemId)?.inspectionType !== template.inspectionType);
   if (template.inspectionType && foreignItems.length) add("items", "只可加入同一巡查類型的巡查項目。");
-  if (normalizeItems(template.items).some((setting, index) => setting !== template.items[index])) add("items", "同一項目類型的巡查項目須相鄰排列。");
+  if (normalizeItems(template.items, catalog).some((setting, index) => setting !== template.items[index])) add("items", "同一項目類型的巡查項目須相鄰排列。");
   if (template.items.some((setting) => !isIntIn(setting.minAttachments, 0, ATTACHMENTS_MAX))) add("items", `最少附件數須為 0–${ATTACHMENTS_MAX} 的整數。`);
   const objectIds = template.objects.map((setting) => setting.objectId);
   if (new Set(objectIds).size !== objectIds.length) add("objects", "適用對象不可重複加入。");
-  const foreignObjects = template.objects.filter((setting) => objectCatalog.find((entry) => entry.id === setting.objectId)?.inspectionType !== template.inspectionType);
+  const foreignObjects = template.objects.filter((setting) => objects.find((entry) => entry.id === setting.objectId)?.inspectionType !== template.inspectionType);
   if (template.inspectionType && foreignObjects.length) add("objects", "只可加入同一巡查類型的對象。");
   if (template.locationCheck && template.objects.some((setting) => setting.distance !== null && !isIntIn(setting.distance, DISTANCE_MIN, DISTANCE_MAX))) add("objects", `對象有效距離須留空或為 ${DISTANCE_MIN}–${DISTANCE_MAX} 米的整數。`);
   if (template.groups.some((group) => !allowedGroupIds.includes(group))) add("groups", "適用群組只可選擇巡查群組。");

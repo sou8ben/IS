@@ -53,9 +53,10 @@ test("moveItem reorders and ignores out-of-range moves", () => {
   assert.deepEqual(moveItem(["a", "b"], 1, 5), ["a", "b"]);
 });
 test("effectiveDistance uses the override, else the template default", () => {
-  const park = initialTemplates[0];
-  assert.equal(effectiveDistance(park, "OBJ-013"), 50);
-  assert.equal(effectiveDistance(park, "OBJ-001"), 100);
+  const green = initialTemplates.find((t) => t.code === "TPL003");
+  assert.equal(effectiveDistance(green, "OBJ-006"), 300);
+  assert.equal(effectiveDistance(green, "OBJ-027"), 150);
+  assert.equal(effectiveDistance(initialTemplates[0], "OBJ-001"), 100, "a template applying to all objects uses its default");
   assert.equal(effectiveDistance(initialTemplates.find((t) => !t.locationCheck), "OBJ-001"), null);
 });
 test("items are grouped by category in order of first appearance", () => {

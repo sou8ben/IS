@@ -12,6 +12,7 @@ export const operations = [
   { id: "comment", name: "工作留言", module: "工作管理", object: "工作", kind: "任一" },
   { id: "create-plan", name: "制定巡查計劃", module: "巡查計劃", object: "新增巡查計劃", kind: "管理" },
   { id: "execute-inspection", name: "執行巡查", module: "巡查記錄", object: "巡查記錄", kind: "巡查" },
+  { id: "void-inspection", name: "作廢巡查", module: "巡查記錄", object: "巡查記錄", kind: "管理" },
 ] as const;
 export const modules = [...new Set(operations.map((op) => op.module))];
 export const departments = ["市政署", "設施管理部", "環境衛生部", "綠化部"];
@@ -119,7 +120,7 @@ export const initialPermissionRules: PermissionRule[] = [
   seed("PERM-002", "管理群組驗收工作", "close", "允許", [condition("relation.managementMember", "true"), condition("relation.typeScope", "true"), condition("relation.gridScope", "true"), condition("object.status", "已解決")]),
   seed("PERM-003", "巡查群組禁止制定計劃", "create-plan", "拒絕", [condition("user.groupKinds", "巡查", "any")], "巡查群組不可制定巡查計劃，即使同時具有管理身份。"),
   seed("PERM-004", "制定計劃職責校驗", "create-plan", "允許", [condition("relation.planning", "true"), condition("relation.requestGroupScope", "true"), condition("relation.requestObjectsScope", "true"), condition("relation.gridScope", "true")]),
-  ...["follow", "resolve", "reopen", "assign", "void", "comment", "execute-inspection"].map((id, index) => seed(`PERM-${String(index + 5).padStart(3, "0")}`, `${operations.find((op) => op.id === id)!.name}職責校驗`, id, "允許", [condition("relation.typeScope", "true"), condition("relation.gridScope", "true")])),
+  ...["follow", "resolve", "reopen", "assign", "void", "comment", "execute-inspection", "void-inspection"].map((id, index) => seed(`PERM-${String(index + 5).padStart(3, "0")}`, `${operations.find((op) => op.id === id)!.name}職責校驗`, id, "允許", [condition("relation.typeScope", "true"), condition("relation.gridScope", "true")])),
 ];
 export interface PolicyObject { id: string; department?: string; executionGroup?: string; managementGroup?: string; inspectionGroup?: string; type?: string; grid?: string; status?: string; creator?: string; handler?: string }
 export interface PlanRequest { group?: string; department?: string; grid?: string; objects?: string[] }
@@ -230,4 +231,12 @@ export function workPolicyObject(work: { id: string; group: string; type: string
   const management = responsibilityGroups.find((g) => g.kind === "管理" && g.department === execution?.department && g.types.includes(work.type));
   const inspection = responsibilityGroups.find((g) => g.kind === "巡查" && g.department === execution?.department && g.grids.includes(work.grid));
   return { id: work.id, department: execution?.department, executionGroup: execution?.id, managementGroup: management?.id, inspectionGroup: inspection?.id, type: work.type, grid: work.grid, status: work.status, creator: policyUsers.find((u) => u.name === work.creator)?.id, handler: policyUsers.find((u) => u.name === work.handler)?.id };
+}
+
+const inspectionWorkType: Record<string, string> = { "公園設施": workTypes[0], "海濱設施": workTypes[0], "街道環境": workTypes[2], "步道設施": workTypes[3] };
+/** Demonstration policy object for an inspection; no matching management group leaves the data missing, which denies. */
+export function inspectionPolicyObject(inspection: { id: string; grid: string; objectType: string; status: string }): PolicyObject {
+  const type = inspectionWorkType[inspection.objectType];
+  const management = responsibilityGroups.find((g) => g.kind === "管理" && g.grids.includes(inspection.grid) && !!type && g.types.includes(type));
+  return { id: inspection.id, department: management?.department, managementGroup: management?.id, type, grid: inspection.grid, status: inspection.status };
 }

@@ -1,5 +1,14 @@
 import type { ReactNode } from "react";
+import type { EventChange, EventFieldDef } from "./event-rules";
+import type { GridRecord } from "./grid-rules";
+import type { InspectionTemplate as BackOfficeTemplate } from "./inspection-templates";
+import type { InspectionTypeRecord } from "./inspection-type-rules";
+import type { ItemTypeRecord, ManagedItem } from "./item-rules";
+import type { ManagedObject } from "./object-rules";
+import type { AttachmentRef, InspectionRecord } from "./inspection-rules";
+import type { WorkLogEntry } from "./work-rules";
 import type { PlanChange, PlannedInspection, PlanSnapshot } from "./plan-rules";
+import type { TemplateItem } from "./app/types";
 
 export type WorkStatus = "新建" | "跟進中" | "已解決" | "已關閉";
 export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -31,6 +40,10 @@ export interface Work {
   pendingSync?: boolean;
   x?: number;
   y?: number;
+  /** Files uploaded from the computer in the back office. */
+  attachments?: AttachmentRef[];
+  /** Set when the work was closed as a duplicate of this kept work. */
+  masterId?: string;
 }
 
 export interface Plan {
@@ -48,10 +61,13 @@ export interface Plan {
   department?: string;
   objectIds?: string[];
   note?: string;
+  /** The 巡查模板 the plan uses (`template` holds its name as at creation). */
+  templateId?: string;
+  /** Retired: the plan template of plans created before 巡查模板 drove plans. */
   planTemplateId?: string;
   groupId?: string;
-  /** Plan template copy taken at creation; later template edits never change the plan. */
-  snapshot?: PlanSnapshot;
+  /** 巡查模板 and chosen objects as at creation, with the template items; later template edits never change the plan. */
+  snapshot?: PlanSnapshot<TemplateItem>;
   /** Inspections generated or added in the back office; the App materialises the non-補入 entries. */
   inspections?: PlannedInspection[];
   changes?: PlanChange[];
@@ -75,6 +91,12 @@ export interface EventRecord {
   pendingSync?: boolean;
   x?: number;
   y?: number;
+  /** Files uploaded from the computer in the back office. */
+  attachments?: AttachmentRef[];
+  /** Type name and field definitions at registration; later type edits never change the event. */
+  fieldSnapshot?: { type: string; defs: EventFieldDef[] };
+  changes?: EventChange[];
+  source?: "後台" | "App" | "計劃";
 }
 
 export interface Notice {
@@ -92,6 +114,21 @@ export interface DemoState {
   plans: Plan[];
   events: EventRecord[];
   notices: Notice[];
+  /** Back-office inspections, plus overlays (void, supplements) on App inspections. */
+  inspectionRecords: InspectionRecord[];
+  /** Work process logs written by the back office; the App's own logs stay in its store. */
+  workLogs: WorkLogEntry[];
+  /** Managed grids; they drive the grid assignment of events, works and objects. */
+  grids: GridRecord[];
+  /** Managed inspection objects; the single list the pickers, templates, NFC and the App read. */
+  objects: ManagedObject[];
+  /** Back-office inspection templates (shared so object detail can show related ones). */
+  inspectionTemplates: BackOfficeTemplate[];
+  /** Managed inspection types: the top-level classification of objects, items and templates. */
+  inspectionTypes: InspectionTypeRecord[];
+  /** 巡查項目類型 and 巡查項目: the App inspection forms, templates and work summaries read them. */
+  itemTypes: ItemTypeRecord[];
+  items: ManagedItem[];
 }
 
 export interface NavItem {

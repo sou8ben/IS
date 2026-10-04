@@ -1,5 +1,7 @@
 import type { Plan, Work } from "../types";
-import { dispatchRules, grids, METERS_PER_PX, objectGroups, workMeta, workTypeConfig } from "./data";
+import { locateName } from "../grid-data";
+import { objectGroupOf } from "../object-data";
+import { dispatchRules, METERS_PER_PX, workMeta, workTypeConfig } from "./data";
 import type { Inspection, InspectionTemplate, ItemResult, Persona, TemplateItem } from "./types";
 
 // ---- 示範時鐘：以 2026-09-29 12:06 為起點，按實際經過時間推進 ----
@@ -14,7 +16,7 @@ export const parseTime = (text: string) => { const [date, time = "00:00"] = text
 export const shortTime = (text?: string) => text ? (text.startsWith("2026-09-29") ? text.slice(11) : text.slice(5)) : "—";
 
 export const topType = (type: string) => type.split("／")[0];
-export const gridOf = (x: number, y: number) => grids.find((grid) => x >= grid.x1 && x <= grid.x2 && y >= grid.y1 && y <= grid.y2)?.name ?? "未歸屬";
+export const gridOf = (x: number, y: number) => locateName(x, y);
 export const distanceM = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.round(Math.hypot(a.x - b.x, a.y - b.y) * METERS_PER_PX);
 
 export const workCreator = (work: Work) => work.creator ?? workMeta[work.id]?.creator ?? "系統";
@@ -63,7 +65,7 @@ export const visiblePlans = (plans: Plan[], persona: Persona) => plans.filter((p
 // ---- 自動分派（詳細設計 6.4） ----
 export function dispatchWork(type: string, grid: string, objectId?: string) {
   const top = topType(type);
-  const objectGroup = objectId ? objectGroups[objectId]?.[top] : undefined;
+  const objectGroup = objectId ? objectGroupOf(objectId) : undefined;
   if (objectGroup) return { group: objectGroup, reason: "對象負責群組", auto: true };
   const rule = dispatchRules.find((item) => item.type === top && (!item.grids.length || item.grids.includes(grid)));
   if (rule) return { group: rule.group, reason: `分派規則 #${rule.priority}「${rule.name}」`, auto: true };

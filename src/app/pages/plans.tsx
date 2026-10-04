@@ -4,14 +4,18 @@ import { ActionSheet, Button, Checkbox, Dialog, Dropdown, Input, Radio, Selector
 import { AddOutline, CheckOutline, ClockCircleOutline, EnvironmentOutline, ExclamationCircleFill, FileOutline, MoreOutline, ScanningOutline, UnorderedListOutline } from "antd-mobile-icons";
 import type { Plan } from "../../types";
 import { AttachmentField, Card, Empty, FilterOptions, GroupTitle, InfoList, LegendDot, MapView, NfcPopup, Page, Progress, ReasonDialog, SignatureField, StatusTag, type MapMarker } from "../components";
-import { eventMeta, myTrack, nearbyObjects, objectIndex, photoAssets, planRoutes, templates } from "../data";
+import { eventMeta, myTrack, photoAssets, planRoutes } from "../data";
+import { activeAppTemplates, appTemplate, itemsForInspection, templateAppliesTo } from "../../item-data";
+import { auxEntriesFor, historyFromApp } from "../../aux-data";
+import { getManagedObjects, getObject } from "../../object-data";
+import { objectIndex } from "../../object-data";
 import { groupTemplateItems, isAbnormal, nowText, shortTime, validateInspection, visiblePlans, workInspection, workPoint, type SubmitError } from "../rules";
 import { useApp } from "../store";
 import type { Inspection, ItemResult, TemplateItem } from "../types";
 
 const TODAY = "2026-09-29";
 const itemPhoto: Record<string, string> = { seat: photoAssets.seat, bin: photoAssets.bin, pipe: photoAssets.pipe, waste: photoAssets.bin, signage: photoAssets.sign, road: photoAssets.sign, rail: photoAssets.sign, buoy: photoAssets.sign, light: photoAssets.sign, play: photoAssets.seat };
-export const inspectionAbnormal = (inspection: Inspection) => { const template = templates.find((item) => item.id === inspection.templateId); return !!template?.items.some((item) => isAbnormal(item, inspection.results[item.key]?.value)); };
+export const inspectionAbnormal = (inspection: Inspection) => { return itemsForInspection(inspection).some((item) => isAbnormal(item, inspection.results[item.key]?.value)); };
 const inspectionTone = (inspection: Inspection): MapMarker["tone"] => inspection.status === "已完成" ? (inspectionAbnormal(inspection) ? "issue" : "done") : "todo";
 
 function PlanCard({ plan, works, selecting, checked, onToggle, onOpen, onLongPress }: { plan: Plan; works: number; selecting: boolean; checked: boolean; onToggle: () => void; onOpen: () => void; onLongPress: () => void }) {
@@ -137,7 +141,7 @@ function PlanOpsPopup({ visible, planIds, onClose }: { visible: boolean; planIds
 
 function InspectionRow({ inspection }: { inspection: Inspection }) {
   const navigate = useNavigate(); const { state, shared } = useApp();
-  const object = objectIndex[inspection.objectId]; const template = templates.find((item) => item.id === inspection.templateId);
+  const object = objectIndex[inspection.objectId]; const template = appTemplate(inspection.templateId);
   const abnormal = inspection.status === "已完成" && inspectionAbnormal(inspection);
   const works = shared.works.filter((work) => workInspection(work).inspectionId === inspection.id || state.workLinks.some((link) => link.workId === work.id && link.inspectionId === inspection.id)).length;
   return <button className="m-insp-row" onClick={() => navigate(`/inspections/${inspection.id}`)}>
@@ -164,7 +168,12 @@ export function InspectionFormPage() {
   const { id = "" } = useParams(); const navigate = useNavigate();
   const { state, shared, persona, updateInspection, submitInspection, supplementInspection } = useApp();
   const inspection = state.inspections.find((item) => item.id === id);
-  const template = templates.find((item) => item.id === inspection?.templateId);
+  // 輔助資料 history: the App's inspections plus back-office records
+  const auxHistory = useMemo(() => historyFromApp(state.inspections, shared.inspectionRecords), [state.inspections, shared.inspectionRecords]);
+  // Item fields come live from 巡查項目 until submission; a submitted inspection keeps the items it was submitted with.
+  const base = inspection ? appTemplate(inspection.templateId) : undefined;
+  // the object's effective distance from the 巡查模板 (per-object override, else the template default)
+  const template = base && inspection ? { ...base, validDistance: base.objectDistances?.[inspection.objectId] ?? base.validDistance, items: itemsForInspection(inspection) } : undefined;
   const object = inspection ? objectIndex[inspection.objectId] : undefined;
   const plan = shared.plans.find((item) => item.id === inspection?.planId);
   const [results, setResults] = useState<Record<string, ItemResult>>(inspection?.results ?? {});
@@ -232,7 +241,7 @@ export function InspectionFormPage() {
       const works = linkedWorks.filter((work) => (workInspection(work).inspectionId === id ? workInspection(work).itemKey : itemOf(work.id)) === item.key);
       return <section key={item.key} id={`item-${item.key}`} className={`m-item ${abnormal ? "abnormal" : ""} ${errorKeys.has(item.key) ? "error" : ""}`}>
         <header><span className="m-item-no">{String(no).padStart(2, "0")}</span><strong>{item.required && <b>*</b>}{item.name}</strong>{abnormal && <StatusTag>異常</StatusTag>}</header>
-        {item.aux && <div className="m-aux"><FileOutline /><span>{item.aux.label}：{item.aux.value ?? "無"}{item.aux.date ? `（${item.aux.date}）` : ""}</span></div>}
+        {auxEntriesFor(item, inspection, auxHistory).filter((entry) => !entry.empty).map((entry) => <div className="m-aux" key={entry.def.id}><FileOutline /><span>{entry.def.name}：{entry.results?.length === 1 ? `${entry.results[0].value}（${entry.results[0].time.slice(5, 10)}）` : entry.text}</span></div>)}
         <ItemControl item={item} result={result} disabled={!editable} onChange={(value) => setItem(item.key, value)} />
         {errors.filter((error) => error.key === item.key).map((error) => <p className="m-item-error" key={error.message}>{error.message}</p>)}
         {abnormal && (editable || !works.length) && <div className="m-abnormal-bar"><span>選到異常值，建議建立工作跟進</span><Button size="mini" color="primary" onClick={() => { updateInspection(id, { results, savedAt: nowText() }); setDirty(false); navigate(`/works/new?from=inspection&inspection=${id}&item=${item.key}`); }}><AddOutline /> 建立工作</Button></div>}
@@ -256,10 +265,11 @@ export function InspectionCreatePage() {
   const [params] = useSearchParams(); const navigate = useNavigate(); const { shared, addInspection } = useApp();
   const plan = shared.plans.find((item) => item.id === params.get("plan"));
   const supplement = params.get("supplement") === "1";
-  const [templateId, setTemplateId] = useState(templates[0].id);
+  const [templateId, setTemplateId] = useState(activeAppTemplates()[0].id);
   const [objectId, setObjectId] = useState<string>();
-  const template = templates.find((item) => item.id === templateId)!;
-  const objects = useMemo(() => nearbyObjects.filter((object) => template.inspectionType.startsWith(object.type.slice(0, 2))).sort((a, b) => a.distance - b.distance), [template]);
+  const template = appTemplate(templateId)!;
+  // the nearest active objects the 巡查模板 applies to (same inspection type, and listed by the template when it lists objects)
+  const objects = useMemo(() => getManagedObjects().filter((managed) => managed.status === "啟用" && templateAppliesTo(template, managed)).flatMap((managed) => getObject(managed.id) ?? []).sort((a, b) => a.distance - b.distance).slice(0, 30), [template]);
   const create = () => {
     if (!objectId) { Toast.show({ content: "請選擇巡查對象" }); return; }
     const id = addInspection(objectId, templateId, plan?.id);
@@ -270,7 +280,7 @@ export function InspectionCreatePage() {
     {plan && <div className="m-inline-note">{supplement ? "計劃已完成，新增的巡查將標記為補錄。" : `將自動關聯計劃「${plan.name}」。`}</div>}
     <GroupTitle>巡查模板（只列所屬巡查群組適用的模板）</GroupTitle>
     <Radio.Group value={templateId} onChange={(value) => { setTemplateId(String(value)); setObjectId(undefined); }}>
-      <div className="m-radio-list">{templates.map((item) => <Radio key={item.id} value={item.id}><strong>{item.name}</strong><small>{item.inspectionType} · {item.items.length} 個項目{item.locationCheck ? ` · 定位 ${item.validDistance} 米` : ""}</small></Radio>)}</div>
+      <div className="m-radio-list">{activeAppTemplates().map((item) => <Radio key={item.id} value={item.id}><strong>{item.name}</strong><small>{item.inspectionType} · {item.items.length} 個項目{item.locationCheck ? ` · 定位 ${item.validDistance} 米` : ""}</small></Radio>)}</div>
     </Radio.Group>
     <GroupTitle extra={<span>按距離由近至遠</span>}>巡查對象</GroupTitle>
     <Radio.Group value={objectId} onChange={(value) => setObjectId(String(value))}>

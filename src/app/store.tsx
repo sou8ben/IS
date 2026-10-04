@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { initialState } from "../data";
 import { useDemo } from "../store";
+import { itemsForInspection } from "../item-data";
 import type { EventRecord, Notice, Work } from "../types";
 import { DEMO_PASSWORD, directory, initialAppState, lockHolders, personas } from "./data";
 import { actionTarget, nextCode, nowText, type WorkAction } from "./rules";
@@ -92,11 +93,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const missing = shared.plans.flatMap((plan) => (plan.inspections ?? []).filter((entry) => entry.source !== "補入" && !stateRef.current.inspections.some((item) => item.id === entry.id)).map((entry) => ({ planId: plan.id, entry })));
     if (!missing.length) return;
-    const added: Inspection[] = missing.map(({ planId, entry }) => ({ id: entry.id, planId, objectId: entry.objectId, templateId: entry.templateId, seq: entry.seq, status: "未完成", results: {} }));
+    // inspections of the plan's own 巡查模板 take the template items from the plan snapshot, so later template edits do not change them
+    const snapshotItems = (planId: string, templateId: string) => { const snapshot = shared.plans.find((plan) => plan.id === planId)?.snapshot; return snapshot?.items && snapshot.templateId === templateId ? structuredClone(snapshot.items) : undefined; };
+    const added: Inspection[] = missing.map(({ planId, entry }) => ({ id: entry.id, planId, objectId: entry.objectId, templateId: entry.templateId, seq: entry.seq, status: "未完成", results: {}, items: snapshotItems(planId, entry.templateId) }));
     const inspections = [...stateRef.current.inspections, ...added];
     setState((current) => ({ ...current, inspections: [...current.inspections, ...added.filter((item) => !current.inspections.some((existing) => existing.id === item.id))] }));
     [...new Set(missing.map((item) => item.planId))].forEach((planId) => syncPlanProgress(planId, inspections));
   }, [shared.plans]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 後台的工作處理記錄同步到 App 的處理流程（附件轉為相片）
+  useEffect(() => {
+    const missing = shared.workLogs.filter((entry) => !stateRef.current.workLogs.some((item) => item.id === entry.id));
+    if (!missing.length) return;
+    const logs: WorkLog[] = missing.map((entry) => ({ id: entry.id, workId: entry.workId, action: entry.action, from: entry.from, to: entry.to, operator: entry.operator, time: entry.time, location: entry.location, comment: entry.comment, photos: entry.attachments?.filter((file) => file.src).map((file) => ({ id: file.id, src: file.src!, name: file.name, watermark: `${entry.time} 後台`, kind: "image" as const })) }));
+    setState((current) => ({ ...current, workLogs: [...current.workLogs, ...logs.filter((log) => !current.workLogs.some((item) => item.id === log.id))] }));
+  }, [shared.workLogs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 後台新增的獨立巡查（無計劃）下發為「未完成」；有計劃的由上面的計劃同步處理
+  useEffect(() => {
+    const missing = shared.inspectionRecords.filter((record) => record.origin === "後台" && !record.planId && !record.voided && record.status === "未完成" && !stateRef.current.inspections.some((item) => item.id === record.id));
+    if (!missing.length) return;
+    const added: Inspection[] = missing.map((record) => ({ id: record.id, objectId: record.objectId, templateId: record.templateId, seq: record.seq, status: "未完成", inspector: record.inspector, results: {} }));
+    setState((current) => ({ ...current, inspections: [...current.inspections, ...added.filter((item) => !current.inspections.some((existing) => existing.id === item.id))] }));
+  }, [shared.inspectionRecords]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- 同步引擎：在線時逐筆處理佇列（詳細設計 12.2） ----
   useEffect(() => {
@@ -160,12 +179,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     removeCompanion: (account) => patch({ companions: state.companions.filter((item) => item.account !== account) }),
     updateInspection: (id, value) => setState((current) => ({ ...current, inspections: current.inspections.map((item) => item.id === id ? { ...item, ...value } : item) })),
     submitInspection: (id, results) => {
-      const inspections = state.inspections.map((item) => item.id === id ? { ...item, results, status: "已完成" as const, inspector: persona.name, submittedAt: nowText(), savedAt: nowText(), pendingSync: state.offline } : item);
+      const inspections = state.inspections.map((item) => item.id === id ? { ...item, items: item.items ?? itemsForInspection(item), results, status: "已完成" as const, inspector: persona.name, submittedAt: nowText(), savedAt: nowText(), pendingSync: state.offline } : item);
       patch({ inspections });
       if (state.offline) queue({ kind: "巡查", title: `提交巡查 ${id}`, tempCode: id, targetId: id });
       syncPlanProgress(inspections.find((item) => item.id === id)?.planId, inspections);
     },
-    supplementInspection: (id, reason, results) => patch({ inspections: state.inspections.map((item) => item.id === id ? { ...item, results, supplements: [...(item.supplements ?? []), { reason, time: nowText(), operator: persona.name }] } : item) }),
+    supplementInspection: (id, reason, results) => patch({ inspections: state.inspections.map((item) => item.id === id ? { ...item, items: item.items ?? itemsForInspection(item), results, supplements: [...(item.supplements ?? []), { reason, time: nowText(), operator: persona.name }] } : item) }),
     addInspection: (objectId, templateId, planId) => {
       const id = nextCode("IN", state.inspections.map((item) => item.id));
       const inspections = [...state.inspections, { id, planId, objectId, templateId, seq: state.inspections.filter((item) => item.planId === planId).length + 1, status: "未完成" as const, results: {} }];

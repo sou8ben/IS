@@ -11,7 +11,9 @@ function readRules(): PermissionRule[] {
   if (!Array.isArray(parsed)) throw new Error("規則儲存格式異常，已拒絕操作。");
   // Invalid rule data must not silently restore permissive defaults.
   for (const rule of parsed) if (validateRule(rule, parsed).length) throw new Error("規則儲存資料異常，已拒絕操作。");
-  return parsed;
+  // Seed rules added after the user first saved their rules are appended, never overriding saved ones.
+  const missing = initialPermissionRules.filter((seedRule) => !parsed.some((rule: PermissionRule) => rule.code === seedRule.code));
+  return missing.length ? [...parsed, ...structuredClone(missing)] : parsed;
 }
 function readLogs(): PermissionLog[] { try { const parsed = JSON.parse(localStorage.getItem(LOG_KEY) ?? "[]"); return Array.isArray(parsed) ? parsed : []; } catch { return []; } }
 interface PermissionStore {

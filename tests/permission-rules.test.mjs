@@ -6,7 +6,7 @@ import ts from "typescript";
 // Run the exact frontend engine without a browser or a separate mock implementation.
 const source = await readFile(new URL("../src/permission-rules.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
-const { evaluatePermission, initialPermissionRules, policyUsers, responsibilityGroups, newConditionGroup, validateRule, summarize, workPolicyObject } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { evaluatePermission, initialPermissionRules, policyUsers, responsibilityGroups, newConditionGroup, validateRule, summarize, workPolicyObject, inspectionPolicyObject } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const clone = (v) => structuredClone(v);
 const target = { id: "WK-TEST", department: "環境衛生部", executionGroup: "exec-sanitation", managementGroup: "manage-sanitation", inspectionGroup: "inspect-middle", type: "環境衛生／收集設施", grid: "大堂南區", status: "已解決" };
 const context = (user = policyUsers[2], object = target, operation = "close") => ({ user: clone(user), object: clone(object), operation, groups: clone(responsibilityGroups) });
@@ -111,4 +111,15 @@ test("malformed context/configuration returns a denial, not an exception", () =>
 test("infinite numeric values, missing deny messages and mismatched modules are invalid", () => {
   const rule = clone(initialPermissionRules[0]); rule.message = ""; rule.module = "巡查計劃"; rule.conditions.children = [leaf("user.level", "Infinity")];
   const errors = validateRule(rule).join(" "); assert.match(errors, /提示語/); assert.match(errors, /不一致/); assert.match(errors, /數字/);
+});
+test("void-inspection: management in scope is allowed; other scope, inspection-only and unmapped data are denied", () => {
+  const inspection = (grid, objectType = "公園設施") => inspectionPolicyObject({ id: "IN-1", grid, objectType, status: "已完成" });
+  const as = (user, object) => run(context(user, object, "void-inspection"));
+  const facility = policyUsers.find((u) => u.id === "USR-006");
+  assert.equal(as(facility, inspection("花地瑪堂北區")).allowed, true);
+  assert.equal(as(facility, inspection("大堂南區", "街道環境")).allowed, false);
+  assert.equal(as(policyUsers.find((u) => u.id === "USR-003"), inspection("花地瑪堂北區")).allowed, false, "management group of another scope");
+  assert.equal(as(policyUsers[0], inspection("花地瑪堂北區")).allowed, true, "an inspector who is also in the in-scope management group");
+  assert.equal(as(policyUsers.find((u) => u.id === "USR-005"), inspection("花地瑪堂北區")).allowed, false);
+  assert.equal(as(facility, inspection("花地瑪堂西區")).allowed, false, "grid without a management group");
 });

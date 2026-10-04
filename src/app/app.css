@@ -704,3 +704,4 @@ html.is-host body { background: #eef1f5; min-width: 1000px; }
 @media (max-height: 1000px) { .device { zoom: .88; } }
 @media (max-height: 880px) { .device { zoom: .78; } }
 @media (max-height: 760px) { .device { zoom: .68; } }
+

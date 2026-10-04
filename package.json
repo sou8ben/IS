@@ -12,7 +12,14 @@
     "test:permissions": "node --test tests/permission-rules.test.mjs",
     "test:nfc": "node --test tests/nfc-tags.test.mjs",
     "test:templates": "node --test tests/inspection-templates.test.mjs",
-    "test:plans": "node --test tests/plan-rules.test.mjs"
+    "test:plans": "node --test tests/plan-rules.test.mjs",
+    "test:inspections": "node --test tests/inspection-rules.test.mjs",
+    "test:events": "node --test tests/event-rules.test.mjs",
+    "test:works": "node --test tests/work-rules.test.mjs",
+    "test:grids": "node --test tests/grid-rules.test.mjs",
+    "test:objects": "node --test tests/object-rules.test.mjs",
+    "test:types": "node --test tests/inspection-type-rules.test.mjs",
+    "test:items": "node --test tests/item-rules.test.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

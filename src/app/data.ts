@@ -27,16 +27,6 @@ export const directory = [
 
 export const execGroups = ["公園設施維護組", "環境衛生執行組", "綠化養護組", "道路維修組"];
 
-export const grids = [
-  { name: "花地瑪堂北區", x1: 540, y1: 40, x2: 760, y2: 230 },
-  { name: "花地瑪堂西區", x1: 400, y1: 100, x2: 540, y2: 260 },
-  { name: "望德堂中區", x1: 520, y1: 230, x2: 620, y2: 285 },
-  { name: "大堂中區", x1: 470, y1: 260, x2: 600, y2: 340 },
-  { name: "大堂南區", x1: 380, y1: 300, x2: 520, y2: 420 },
-  { name: "氹仔中央區", x1: 510, y1: 440, x2: 920, y2: 640 },
-  { name: "路環東區", x1: 590, y1: 640, x2: 1200, y2: 1000 },
-];
-
 export const addressBook = [
   { name: "黑沙環公園", parish: "花地瑪堂區", street: "黑沙環馬路", number: "—", building: "黑沙環公園", x: 640, y: 112 },
   { name: "黑沙環海濱座椅區", parish: "花地瑪堂區", street: "黑沙環海邊馬路", number: "—", building: "海濱座椅區", x: 655, y: 198 },
@@ -55,27 +45,30 @@ export const myLocation = { x: 652, y: 194, accuracy: 8 };
 export const photoAssets = { seat: asset("app/seat.svg"), bin: asset("app/bin.svg"), tree: asset("app/tree.svg"), sign: asset("app/sign.svg"), pipe: asset("app/pipe.svg") };
 
 // ---- 巡查模板 ----
+// Baseline App templates: membership, order, required and attachments are fixed here; the item fields
+// (name, type, kind, options, abnormal values, summaries) come live from the managed 巡查項目 via `itemId` (see item-data.ts).
+// Completed seed inspections keep this baseline as their snapshot.
 export const templates: InspectionTemplate[] = [
   { id: "TPL001", name: "公園設施標準巡查表", inspectionType: "公園設施巡查", locationCheck: true, validDistance: 100, checkOn: ["開始填寫", "提交"], items: [
-    { key: "seat", name: "座椅穩固狀態", itemType: "一般設施", kind: "BOOL", options: ["是", "否"], abnormal: ["否"], required: true, minAttachments: 0, aux: { label: "上次巡查結果", source: "上次巡查結果", value: "是（穩固）", date: "2026-09-22" }, summaries: [{ summary: "座椅固定螺絲鬆脫", workType: "公共設施／座椅" }, { summary: "座椅木條破損", workType: "公共設施／座椅" }] },
-    { key: "light", name: "照明設施狀態", itemType: "照明設施", kind: "SINGLE", options: ["正常", "閃爍", "不亮"], abnormal: ["閃爍", "不亮"], required: true, minAttachments: 0, aux: { label: "燈柱數量", source: "對象屬性", value: "6 支" }, summaries: [{ summary: "燈具故障", workType: "公共設施／照明" }] },
-    { key: "play", name: "遊樂設施安全", itemType: "一般設施", kind: "MULTI", options: ["正常", "部件鬆脫", "表面破損", "尖角外露"], abnormal: ["部件鬆脫", "表面破損", "尖角外露"], required: true, minAttachments: 1, aux: { label: "上次巡查結果", source: "上次巡查結果", value: "正常", date: "2026-09-22" }, summaries: [{ summary: "遊樂設施部件鬆脫", workType: "公共設施／遊樂設施" }] },
-    { key: "bin", name: "垃圾桶清潔度", itemType: "環境衛生", kind: "SINGLE", options: ["清潔", "一般", "滿溢"], abnormal: ["滿溢"], required: true, minAttachments: 0, summaries: [{ summary: "垃圾桶滿溢", workType: "環境衛生／清潔" }] },
-    { key: "pipe", name: "灌溉水管", itemType: "供水設施", kind: "SINGLE", options: ["正常", "滲漏"], abnormal: ["滲漏"], required: false, minAttachments: 2, aux: { label: "水管走向圖", source: "對象附件", value: "水管走向圖.pdf" }, summaries: [{ summary: "灌溉水管滲漏", workType: "綠化／灌溉" }] },
-    { key: "ground", name: "地面狀況描述", itemType: "一般設施", kind: "TEXT", required: false, minAttachments: 0, maxLength: 500 },
-    { key: "sign", name: "管理處人員簽名", itemType: "一般設施", kind: "SIGNATURE", required: true, minAttachments: 0 },
+    { key: "seat", itemId: "ITEM-001", name: "座椅穩固狀態", itemType: "一般設施", kind: "BOOL", options: ["是", "否"], abnormal: ["否"], required: true, minAttachments: 0, summaries: [{ summary: "座椅固定螺絲鬆脫", workType: "公共設施／座椅" }, { summary: "座椅木條破損", workType: "公共設施／座椅" }] },
+    { key: "light", itemId: "ITEM-002", name: "照明設施狀態", itemType: "照明設施", kind: "SINGLE", options: ["正常", "閃爍", "不亮"], abnormal: ["閃爍", "不亮"], required: true, minAttachments: 0, summaries: [{ summary: "燈具故障", workType: "公共設施／照明" }] },
+    { key: "play", itemId: "ITEM-006", name: "遊樂設施安全", itemType: "一般設施", kind: "MULTI", options: ["正常", "部件鬆脫", "表面破損", "尖角外露"], abnormal: ["部件鬆脫", "表面破損", "尖角外露"], required: true, minAttachments: 1, summaries: [{ summary: "遊樂設施部件鬆脫", workType: "公共設施／遊樂設施" }] },
+    { key: "bin", itemId: "ITEM-003", name: "垃圾桶清潔度", itemType: "環境衛生", kind: "SINGLE", options: ["清潔", "一般", "滿溢"], abnormal: ["滿溢"], required: true, minAttachments: 0, summaries: [{ summary: "垃圾桶滿溢", workType: "環境衛生／清潔" }] },
+    { key: "pipe", itemId: "ITEM-007", name: "灌溉水管", itemType: "供水設施", kind: "SINGLE", options: ["正常", "滲漏"], abnormal: ["滲漏"], required: false, minAttachments: 2, summaries: [{ summary: "灌溉水管滲漏", workType: "綠化／灌溉" }] },
+    { key: "ground", itemId: "ITEM-008", name: "地面狀況描述", itemType: "一般設施", kind: "TEXT", required: false, minAttachments: 0, maxLength: 500 },
+    { key: "sign", itemId: "ITEM-009", name: "管理處人員簽名", itemType: "一般設施", kind: "SIGNATURE", required: true, minAttachments: 0 },
   ] },
   { id: "TPL002", name: "街道環境標準巡查表", inspectionType: "街道環境巡查", locationCheck: true, validDistance: 100, checkOn: ["提交"], items: [
-    { key: "road", name: "路面狀況", itemType: "道路設施", kind: "SINGLE", options: ["良好", "破損", "積水"], abnormal: ["破損", "積水"], required: true, minAttachments: 0, aux: { label: "上次巡查結果", source: "上次巡查結果", value: "良好", date: "2026-09-25" }, summaries: [{ summary: "路面破損", workType: "道路設施／路面" }, { summary: "路面積水", workType: "環境衛生／積水" }] },
-    { key: "waste", name: "有否垃圾堆積", itemType: "環境衛生", kind: "BOOL", options: ["是", "否"], abnormal: ["是"], required: true, minAttachments: 0, summaries: [{ summary: "垃圾堆積", workType: "環境衛生／清潔" }] },
-    { key: "signage", name: "指示牌清晰度", itemType: "一般設施", kind: "SINGLE", options: ["清晰", "褪色", "損毀"], abnormal: ["褪色", "損毀"], required: true, minAttachments: 0, summaries: [{ summary: "指示牌字樣褪色", workType: "公共設施／標示" }] },
-    { key: "note", name: "其他觀察", itemType: "一般設施", kind: "TEXT", required: false, minAttachments: 0, maxLength: 500 },
+    { key: "road", itemId: "ITEM-012", name: "路面狀況", itemType: "道路設施", kind: "SINGLE", options: ["良好", "破損", "積水"], abnormal: ["破損", "積水"], required: true, minAttachments: 0, summaries: [{ summary: "路面破損", workType: "道路設施／路面" }, { summary: "路面積水", workType: "環境衛生／積水" }] },
+    { key: "waste", itemId: "ITEM-013", name: "有否垃圾堆積", itemType: "環境衛生", kind: "BOOL", options: ["是", "否"], abnormal: ["是"], required: true, minAttachments: 0, summaries: [{ summary: "垃圾堆積", workType: "環境衛生／清潔" }] },
+    { key: "signage", itemId: "ITEM-005", name: "指示牌清晰度", itemType: "一般設施", kind: "SINGLE", options: ["清晰", "褪色", "損毀"], abnormal: ["褪色", "損毀"], required: true, minAttachments: 0, summaries: [{ summary: "指示牌字樣褪色", workType: "公共設施／標示" }] },
+    { key: "note", itemId: "ITEM-014", name: "其他觀察", itemType: "一般設施", kind: "TEXT", required: false, minAttachments: 0, maxLength: 500 },
   ] },
   { id: "TPL004", name: "海濱設施巡查表", inspectionType: "海濱設施巡查", locationCheck: true, validDistance: 100, checkOn: ["提交"], items: [
-    { key: "rail", name: "欄杆穩固", itemType: "一般設施", kind: "BOOL", options: ["是", "否"], abnormal: ["否"], required: true, minAttachments: 0, summaries: [{ summary: "海濱欄杆鬆動", workType: "道路設施／欄杆" }] },
-    { key: "buoy", name: "救生圈", itemType: "一般設施", kind: "SINGLE", options: ["齊備", "缺失"], abnormal: ["缺失"], required: true, minAttachments: 0, summaries: [{ summary: "救生圈缺失", workType: "公共設施／標示" }] },
-    { key: "light", name: "照明設施狀態", itemType: "照明設施", kind: "SINGLE", options: ["正常", "閃爍", "不亮"], abnormal: ["閃爍", "不亮"], required: true, minAttachments: 0, summaries: [{ summary: "燈具故障", workType: "公共設施／照明" }] },
-    { key: "note", name: "其他觀察", itemType: "一般設施", kind: "TEXT", required: false, minAttachments: 0, maxLength: 500 },
+    { key: "rail", itemId: "ITEM-018", name: "欄杆穩固", itemType: "一般設施", kind: "BOOL", options: ["是", "否"], abnormal: ["否"], required: true, minAttachments: 0, summaries: [{ summary: "海濱欄杆鬆動", workType: "道路設施／欄杆" }] },
+    { key: "buoy", itemId: "ITEM-019", name: "救生圈", itemType: "一般設施", kind: "SINGLE", options: ["齊備", "缺失"], abnormal: ["缺失"], required: true, minAttachments: 0, summaries: [{ summary: "救生圈缺失", workType: "公共設施／標示" }] },
+    { key: "light", itemId: "ITEM-020", name: "照明設施狀態", itemType: "照明設施", kind: "SINGLE", options: ["正常", "閃爍", "不亮"], abnormal: ["閃爍", "不亮"], required: true, minAttachments: 0, summaries: [{ summary: "燈具故障", workType: "公共設施／照明" }] },
+    { key: "note", itemId: "ITEM-021", name: "其他觀察", itemType: "一般設施", kind: "TEXT", required: false, minAttachments: 0, maxLength: 500 },
   ] },
 ];
 

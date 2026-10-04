@@ -15,10 +15,11 @@ export interface Persona {
 
 export type InputKind = "BOOL" | "SINGLE" | "MULTI" | "TEXT" | "SIGNATURE";
 
-export interface AuxData { label: string; source: "上次巡查結果" | "對象屬性" | "對象附件"; value?: string; date?: string }
 
 export interface TemplateItem {
   key: string;
+  /** The managed 巡查項目 this template item uses; its name, type, kind, options, abnormal values and summaries come from there. */
+  itemId?: string;
   name: string;
   itemType: string;
   kind: InputKind;
@@ -27,7 +28,6 @@ export interface TemplateItem {
   required: boolean;
   minAttachments: number;
   maxLength?: number;
-  aux?: AuxData;
   summaries?: { summary: string; workType: string }[];
 }
 
@@ -39,6 +39,10 @@ export interface InspectionTemplate {
   validDistance: number;
   checkOn: ("開始填寫" | "提交")[];
   items: TemplateItem[];
+  /** From the back-office 巡查模板: its status, per-object effective-distance overrides and listed objects (none = all of the type). */
+  status?: "生效" | "失效";
+  objectDistances?: Record<string, number>;
+  objectIds?: string[];
 }
 
 export interface MapObject {
@@ -74,6 +78,8 @@ export interface Inspection {
   location?: { passed: boolean; distance: number; accuracy: number; nfc?: string };
   supplements?: { reason: string; time: string; operator: string }[];
   pendingSync?: boolean;
+  /** The template items as they were when the inspection was submitted, so later item changes never alter it. */
+  items?: TemplateItem[];
 }
 
 export interface WorkLog {

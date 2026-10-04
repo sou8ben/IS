@@ -4,7 +4,9 @@ import { ActionSheet, Button, CascadePicker, Checkbox, Dialog, Dropdown, Input, 
 import { AddOutline, ExclamationCircleFill, MoreOutline, RightOutline } from "antd-mobile-icons";
 import type { Work } from "../../types";
 import { AddressField, AttachmentField, Card, Empty, FilterOptions, InfoList, LegendDot, MapView, Page, PhotoThumb, reverseGeocode, StatusTag, type AddressValue, type MapMarker } from "../components";
-import { commentTemplates, eventToWorkType, execGroups, objectIndex, photoAssets, templates, workTypeConfig, workTypeTree } from "../data";
+import { commentTemplates, eventToWorkType, execGroups, photoAssets, workTypeConfig, workTypeTree } from "../data";
+import { appTemplate } from "../../item-data";
+import { objectIndex } from "../../object-data";
 import { actionDeniedReason, actionTarget, availableActions, dispatchWork, distanceM, isGroupWork, isMyWork, nowText, renderTemplate, shortTime, slaInfo, topType, workCreator, workDupGroup, workInspection, workPoint, type WorkAction } from "../rules";
 import { useApp, type ActionPayload } from "../store";
 import type { Photo } from "../types";
@@ -187,7 +189,8 @@ export function WorkFormPage() {
   const { state, shared, createWork, linkWorkToEvent, linkInspectionWork } = useApp();
   const from = params.get("from") ?? "獨立";
   const inspection = state.inspections.find((item) => item.id === params.get("inspection"));
-  const template = templates.find((item) => item.id === inspection?.templateId);
+  // The live template: work summaries (and their SLA) are taken from the current 巡查項目 settings.
+  const template = inspection ? appTemplate(inspection.templateId) : undefined;
   const item = template?.items.find((entry) => entry.key === params.get("item"));
   const event = shared.events.find((entry) => entry.id === params.get("event"));
   const plan = shared.plans.find((entry) => entry.id === (params.get("plan") ?? inspection?.planId ?? event?.planId));
