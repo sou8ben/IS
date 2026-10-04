@@ -3,9 +3,9 @@ import { HashRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } f
 import {
   ApartmentOutlined, AppstoreOutlined, BellOutlined, BookOutlined, BuildOutlined,
   CaretDownOutlined, CloseOutlined, CloudServerOutlined, CodeOutlined, CompassOutlined,
-  DatabaseOutlined, FileSearchOutlined, FolderOpenOutlined, GlobalOutlined, HomeOutlined,
+  FileSearchOutlined, FolderOpenOutlined, GlobalOutlined, HomeOutlined,
   ImportOutlined, LeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, MobileOutlined, NodeIndexOutlined,
-  NotificationOutlined, ReloadOutlined, SafetyCertificateOutlined, SearchOutlined,
+  NotificationOutlined, ReloadOutlined, SearchOutlined,
   SettingOutlined, SolutionOutlined, TeamOutlined, ToolOutlined, UserOutlined,
 } from "@ant-design/icons";
 import { DemoProvider, useDemo } from "./store";
@@ -99,17 +99,10 @@ function AppShell() {
 }
 
 function PrototypeUpdateDialog({ onClose }: { onClose: () => void }) {
-  const updates = [
-    { icon: <CompassOutlined />, label: "巡查作業", title: "巡查配置與填寫體驗更新", text: "巡查項目分類樹會跟隨巡查類型；輔助資料改為項目標題旁的快速入口，並補上無資料狀態。" },
-    { icon: <DatabaseOutlined />, label: "資料與定位", title: "NFC 標籤及位置資料更完整", text: "NFC 標籤支援結構化地址、名稱、同列緯度／經度，以及載入目前頂點後可取消。" },
-    { icon: <FileSearchOutlined />, label: "預覽與表格", title: "計劃預覽與資料表格排版優化", text: "移除計劃預覽多餘的狀態標籤，修正次序欄遮擋，並改善輔助資料表格的閱讀層次。" },
-    { icon: <SolutionOutlined />, label: "報表與導覽", title: "自訂報表導覽狀態修正", text: "自訂報表不再與營運報表同時高亮，側邊欄可清楚反映目前所在功能。" },
-    { icon: <SafetyCertificateOutlined />, label: "細節修正", title: "巡查詳情互動狀態調整", text: "修正作廢按鈕 hover 效果，並統一按鈕、彈窗與空資料狀態的視覺表現。" },
-  ];
   return <div className="overlay centered update-overlay" role="presentation" onMouseDown={onClose}>
     <section className="update-dialog" role="dialog" aria-modal="true" aria-labelledby="prototype-update-title" onMouseDown={(event) => event.stopPropagation()}>
-      <header className="update-dialog-header"><div className="update-dialog-brand"><span><CloudServerOutlined /></span><div><small>原型更新說明</small><h2 id="prototype-update-title">2026.10.03 版本更新</h2></div></div><button type="button" className="update-dialog-close" aria-label="關閉更新說明" onClick={onClose}><CloseOutlined /></button></header>
-      <div className="update-dialog-body"><div className="update-dialog-intro"><span>本次更新</span><strong>巡查派工管理系統原型</strong><p>集中整理巡查、定位、報表與資料呈現的操作細節，方便繼續試用及驗證流程。</p></div><div className="update-list">{updates.map((update) => <article key={update.title}><span className="update-item-icon">{update.icon}</span><div><div className="update-item-meta"><small>{update.label}</small><strong>{update.title}</strong></div><p>{update.text}</p></div></article>)}</div></div>
+      <header className="update-dialog-header"><div className="update-dialog-brand"><span><CloudServerOutlined /></span><div><h2 id="prototype-update-title">原型更新說明</h2></div></div><button type="button" className="update-dialog-close" aria-label="關閉更新說明" onClick={onClose}><CloseOutlined /></button></header>
+      <div className="update-dialog-body"><div className="update-dialog-intro"><div className="update-dialog-intro-head"><strong>2026.10.03</strong></div><p className="update-dialog-content">{"首次版本"}</p></div></div>
       <footer className="update-dialog-footer"><span>示範版本 · 資料保存在本機瀏覽器</span><Button variant="primary" onClick={onClose}>知道了</Button></footer>
     </section>
   </div>;
