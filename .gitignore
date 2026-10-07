@@ -10,6 +10,7 @@ dist/
 # Local design specification
 詳細設計.md
 AGENTS.md
-.openai
-.github
+.openai/
+.claude/
+.github/
 docs/
