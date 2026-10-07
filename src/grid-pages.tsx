@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { EditOutlined, EnvironmentOutlined, ExportOutlined, PlusOutlined, ReloadOutlined, SwapOutlined, UndoOutlined, UnorderedListOutlined, UploadOutlined } from "@ant-design/icons";
+import { EditOutlined, EnvironmentOutlined, ExportOutlined, PlusOutlined, ReloadOutlined, SwapOutlined, UnorderedListOutlined, UploadOutlined } from "@ant-design/icons";
 import { Button, ConfirmDialog, DenseTable, Field, FormDrawer, PageHeader, Pagination, Select, StatusTag, useToast } from "./components";
 import { resolveEvent } from "./event-data";
 import { locateName } from "./grid-data";
@@ -168,24 +168,17 @@ function RangeSection({ r, grids, editing, onTouch }: { r: RangeEditor; grids: G
     ...(editing ? [{ id: "current", rings: ringsPx(editing.boundary), label: r.replaced ? "原有範圍" : "目前範圍", color: r.replaced ? undefined : "#2468c9", dim: r.replaced, dashed: true, selected: !r.replaced }] : []),
     ...(r.points.length ? [{ id: "draft", rings: [r.points], color: "#e60012", closed: r.finished && r.points.length >= 3, dashed: !r.finished }] : []),
   ];
-  // Only drawn or loaded vertices are shown and can be dragged; the current range's vertices need 載入目前頂點 first.
-  const markers: MapMarkerSpec[] = r.points.map((point, index) => ({ id: `v${index}`, kind: "object", x: point[0], y: point[1], tone: "object", label: String(index + 1), title: `頂點 ${index + 1}`, draggable: true }));
-  const dragVertex = (id: string, point: Pt) => touch(() => r.moveVertex(Number(id.slice(1)), point));
-  const drawnArea = r.tab === "draw" && r.finished && r.checked ? areaM2(r.checked) : undefined;
   const summary = r.checked ? `${kindText({ boundary: r.checked } as GridRecord)} · 面積 ${formatArea(areaM2(r.checked))}` : undefined;
   return <section className="group-editor-section"><header><h3>範圍</h3></header>
-    <div className="grid-range-tabs segmented" role="tablist"><button type="button" role="tab" aria-selected={r.tab === "draw"} className={r.tab === "draw" ? "active" : ""} onClick={() => r.setTab("draw")}>在地圖繪製</button><button type="button" role="tab" aria-selected={r.tab === "geojson"} className={r.tab === "geojson" ? "active" : ""} onClick={() => r.setTab("geojson")}>編輯 GeoJSON</button></div>
+    <div className="grid-range-tabs segmented" role="tablist"><button type="button" role="tab" aria-selected={r.tab === "draw"} className={r.tab === "draw" ? "active" : ""} onClick={() => r.setTab("draw")}>網格預覽</button><button type="button" role="tab" aria-selected={r.tab === "geojson"} className={r.tab === "geojson" ? "active" : ""} onClick={() => r.setTab("geojson")}>編輯 GeoJSON</button></div>
     {r.tab === "draw" ? <>
-      <div className="evt-pick"><PlanMap className="evt-pick-map" polygons={polygons} markers={markers} onPick={(point) => touch(() => r.pick(point))} onMarkerDrag={dragVertex} onMarkerDragEnd={r.endDrag} fitPolygon={r.points.length ? "draft" : editing ? "current" : undefined /* on return from the GeoJSON tab, show the drawing */} fitKey={editing ? `edit-${editing.id}` : "draw"} legend={<><LegendItem tone="route">{editing ? "此網格範圍／重新繪製的範圍" : "繪製中的範圍"}</LegendItem><LegendItem tone="ghost">其他網格</LegendItem></>} /></div>
-      <div className="evt-pick-note grid-draw-bar"><span>{r.finished ? `已完成繪製：${r.points.length} 個頂點${drawnArea ? `，面積 ${formatArea(drawnArea)}` : ""}。拖動頂點可調整位置。` : r.points.length ? `已選 ${r.points.length} 個頂點，繼續點擊地圖，拖動頂點可調整位置；至少 3 個後可完成繪製。` : editing && !r.replaced ? (r.canLoadVertices ? "目前保持原有範圍。按「載入目前頂點」後可拖動頂點調整，或點擊地圖重新繪製。" : "目前保持原有範圍（多個區塊或含孔洞，不可載入頂點）。點擊地圖可重新繪製。") : editing ? "已清除所有頂點。點擊地圖重新繪製，或按「復原」恢復。" : "點擊地圖依次選取多邊形的頂點（可先放大），之後可拖動頂點調整。"}</span>
-        <span className="grid-draw-actions">{r.canLoadVertices && !r.points.length && <Button onClick={() => touch(r.loadVertices)}>載入目前頂點</Button>}{editing && r.loadedCurrent && <Button onClick={() => touch(r.cancelLoadedVertices)}>取消</Button>}<Button icon={<UndoOutlined />} disabled={!r.canUndo} onClick={() => touch(r.undo)}>復原</Button><Button disabled={!r.points.length} onClick={() => touch(r.clear)}>清除</Button><Button variant="primary" disabled={r.points.length < 3 || r.finished} onClick={() => touch(r.finish)}>完成繪製</Button></span></div>
+      <div className="evt-pick"><PlanMap className="evt-pick-map" polygons={polygons} fitPolygon={r.points.length ? "draft" : editing ? "current" : undefined} fitKey={editing ? `edit-${editing.id}` : "draw"} legend={<><LegendItem tone="route">{editing ? "網格範圍" : "預覽範圍"}</LegendItem><LegendItem tone="ghost">其他網格</LegendItem></>} /></div>
     </> : <div className="grid-geojson">
       <textarea rows={editing ? 14 : 9} value={r.text} onChange={(event) => touch(() => r.setText(event.target.value))} placeholder='貼上單個 Feature 或 Polygon／MultiPolygon，例如 {"type":"Feature","properties":{"name":"…"},"geometry":{…}}' aria-label="GeoJSON" spellCheck={false} />
       <div className="grid-geojson-bar"><label className="btn btn-default grid-file"><input type="file" accept=".geojson,.json,application/geo+json,application/json" onChange={(event) => { void readFile(event.target.files?.[0]); event.target.value = ""; }} />選擇檔案（≤ 20 MB）</label>
         {editing && <Button onClick={() => touch(r.resetText)}>還原目前範圍</Button>}
         <span className={fileError || r.parsed?.error || (r.parsed && r.parsed.features.length > 1) ? "grid-bad" : "grid-ok"}>{fileError || (!r.parsed ? "尚未輸入" : r.parsed.error ?? (r.parsed.features.length === 1 ? (summary ?? "已解析 1 個要素") : `含有 ${r.parsed.features.length} 個要素，請改用「匯入」`))}</span></div>
     </div>}
-    {editing && <div className="evt-pick-note grid-range-summary"><span>{summary ? `${r.changed ? "修改後" : "目前"}範圍：${summary}。${r.changed ? "儲存後生效，可使用「重新歸屬」更新現有事件及工作。" : ""}` : "目前輸入的範圍尚未有效。"}</span></div>}
   </section>;
 }
 
