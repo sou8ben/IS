@@ -102,7 +102,20 @@ function PrototypeUpdateDialog({ onClose }: { onClose: () => void }) {
   return <div className="overlay centered update-overlay" role="presentation" onMouseDown={onClose}>
     <section className="update-dialog" role="dialog" aria-modal="true" aria-labelledby="prototype-update-title" onMouseDown={(event) => event.stopPropagation()}>
       <header className="update-dialog-header"><div className="update-dialog-brand"><span><CloudServerOutlined /></span><div><h2 id="prototype-update-title">原型更新說明</h2></div></div><button type="button" className="update-dialog-close" aria-label="關閉更新說明" onClick={onClose}><CloseOutlined /></button></header>
-      <div className="update-dialog-body"><div className="update-dialog-intro"><div className="update-dialog-intro-head"><strong>2026.10.03</strong></div><p className="update-dialog-content">{"首次版本"}</p></div></div>
+      <div className="update-dialog-body">
+        <div className="update-dialog-intro">
+          <div className="update-dialog-intro-head">
+            <strong>2026.10.07</strong></div>
+            <p className="update-dialog-content">{"移除網格編輯功能"}</p>
+        </div>
+        <div className="update-dialog-intro">
+          <div className="update-dialog-intro-head">
+            <strong>2026.10.03</strong></div>
+            <p className="update-dialog-content">{"首次版本"}</p>
+        </div>
+      </div>
+          
+
       <footer className="update-dialog-footer"><span>示範版本 · 資料保存在本機瀏覽器</span><Button variant="primary" onClick={onClose}>知道了</Button></footer>
     </section>
   </div>;

@@ -63,7 +63,7 @@ button, input, select, textarea { font: inherit; } button { cursor: pointer; } a
 .update-dialog-brand h2 { margin: 0; color: var(--text); font-size: 17px; font-weight: 600; }
 .update-dialog-close { width: 30px; height: 30px; flex: 0 0 auto; border: 0; border-radius: 3px; background: transparent; color: #7b8491; cursor: pointer; }
 .update-dialog-close:hover { background: #f2f4f7; color: var(--text); }
-.update-dialog-body { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px; background: #f7f8fa; }
+.update-dialog-body { display: grid; gap: 12px; align-content: start; flex: 1; min-height: 0; overflow: auto; padding: 18px 20px; background: #f7f8fa; }
 .update-dialog-intro { padding: 14px; border-left: 3px solid var(--primary); background: #fff; box-shadow: 0 1px 2px rgba(27,39,57,.03); }
 .update-dialog-intro-head { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #edf0f4; }
 .update-dialog-intro-head span { display: block; margin-bottom: 3px; color: var(--primary); font-size: 11px; font-weight: 600; }
