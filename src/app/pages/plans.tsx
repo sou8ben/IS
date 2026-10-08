@@ -172,7 +172,7 @@ export function InspectionFormPage() {
   const auxHistory = useMemo(() => historyFromApp(state.inspections, shared.inspectionRecords), [state.inspections, shared.inspectionRecords]);
   // Item fields come live from 巡查項目 until submission; a submitted inspection keeps the items it was submitted with.
   const base = inspection ? appTemplate(inspection.templateId) : undefined;
-  // the object's effective distance from the 巡查模板 (per-object override, else the template default)
+  // the object's effective distance from the 巡查計劃模板 (per-object override, else the template default)
   const template = base && inspection ? { ...base, validDistance: base.objectDistances?.[inspection.objectId] ?? base.validDistance, items: itemsForInspection(inspection) } : undefined;
   const object = inspection ? objectIndex[inspection.objectId] : undefined;
   const plan = shared.plans.find((item) => item.id === inspection?.planId);
@@ -268,7 +268,7 @@ export function InspectionCreatePage() {
   const [templateId, setTemplateId] = useState(activeAppTemplates()[0].id);
   const [objectId, setObjectId] = useState<string>();
   const template = appTemplate(templateId)!;
-  // the nearest active objects the 巡查模板 applies to (same inspection type, and listed by the template when it lists objects)
+  // the nearest active objects the 巡查計劃模板 applies to (same inspection type, and listed by the template when it lists objects)
   const objects = useMemo(() => getManagedObjects().filter((managed) => managed.status === "啟用" && templateAppliesTo(template, managed)).flatMap((managed) => getObject(managed.id) ?? []).sort((a, b) => a.distance - b.distance).slice(0, 30), [template]);
   const create = () => {
     if (!objectId) { Toast.show({ content: "請選擇巡查對象" }); return; }
@@ -278,7 +278,7 @@ export function InspectionCreatePage() {
   };
   return <Page title={supplement ? "補錄巡查" : "新增巡查"} backTo={plan ? `/plans/${plan.id}` : "/inspections"} footer={<div className="m-footer-bar"><Button block color="primary" onClick={create}>建立並開始填寫</Button></div>}>
     {plan && <div className="m-inline-note">{supplement ? "計劃已完成，新增的巡查將標記為補錄。" : `將自動關聯計劃「${plan.name}」。`}</div>}
-    <GroupTitle>巡查模板（只列所屬巡查群組適用的模板）</GroupTitle>
+    <GroupTitle>巡查計劃模板（只列所屬巡查群組適用的巡查計劃模板）</GroupTitle>
     <Radio.Group value={templateId} onChange={(value) => { setTemplateId(String(value)); setObjectId(undefined); }}>
       <div className="m-radio-list">{activeAppTemplates().map((item) => <Radio key={item.id} value={item.id}><strong>{item.name}</strong><small>{item.inspectionType} · {item.items.length} 個項目{item.locationCheck ? ` · 定位 ${item.validDistance} 米` : ""}</small></Radio>)}</div>
     </Radio.Group>
@@ -286,7 +286,7 @@ export function InspectionCreatePage() {
     <Radio.Group value={objectId} onChange={(value) => setObjectId(String(value))}>
       <div className="m-radio-list">{objects.map((object) => <Radio key={object.id} value={object.id}><strong>{object.name}</strong><small>{object.distance} 米 · {object.grid}</small></Radio>)}</div>
     </Radio.Group>
-    {!objects.length && <Empty title="附近沒有適用此模板的對象" />}
+    {!objects.length && <Empty title="附近沒有適用此巡查計劃模板的對象" />}
   </Page>;
 }
 

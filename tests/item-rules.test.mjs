@@ -70,7 +70,7 @@ test("usage locks the inspection type and input kind, and blocks 失效", () => 
   const usage = itemUsage("ITEM-001", templates, [{ items: [{ itemId: "ITEM-001" }] }]);
   assert.deepEqual(usage, { templates: 2, activeTemplates: 1, appTemplates: 1 }); assert.equal(isLocked(usage), true);
   assert.equal(isLocked(itemUsage("ITEM-009", templates, [])), false);
-  assert.match(deactivationBlock(usage), /1 個生效中的巡查模板及 1 個 App 巡查表/);
+  assert.match(deactivationBlock(usage), /1 個生效中的巡查計劃模板及 1 個 App 巡查表/);
   assert.equal(deactivationBlock({ templates: 1, activeTemplates: 0, appTemplates: 0 }), null, "only inactive templates use it");
   const locked = ctx({ usage, original: item() });
   assert.ok(messages(item({ inputKind: "單選", options: ["a", "b"], abnormal: [] }), locked).includes("輸入方式不可修改"));

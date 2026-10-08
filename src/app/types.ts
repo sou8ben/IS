@@ -39,7 +39,7 @@ export interface InspectionTemplate {
   validDistance: number;
   checkOn: ("開始填寫" | "提交")[];
   items: TemplateItem[];
-  /** From the back-office 巡查模板: its status, per-object effective-distance overrides and listed objects (none = all of the type). */
+  /** From the back-office 巡查計劃模板: its status, per-object effective-distance overrides and listed objects (none = all of the type). */
   status?: "生效" | "失效";
   objectDistances?: Record<string, number>;
   objectIds?: string[];

@@ -79,7 +79,7 @@ export function itemUsage(itemId: string, templates: { items: { itemId: string }
 export const isLocked = (usage: ItemUsage) => usage.templates + usage.appTemplates > 0;
 export function deactivationBlock(usage: ItemUsage): string | null {
   if (!usage.activeTemplates && !usage.appTemplates) return null;
-  const parts = [usage.activeTemplates && `${usage.activeTemplates} 個生效中的巡查模板`, usage.appTemplates && `${usage.appTemplates} 個 App 巡查表`].filter(Boolean);
+  const parts = [usage.activeTemplates && `${usage.activeTemplates} 個生效中的巡查計劃模板`, usage.appTemplates && `${usage.appTemplates} 個 App 巡查表`].filter(Boolean);
   return `此項目仍被 ${parts.join("及 ")}使用，不可設為失效。`;
 }
 
@@ -254,8 +254,8 @@ export function validateItem(draft: ManagedItem, ctx: ItemContext): { issues: It
   if (!draft.itemTypeId) add("basic", "請選擇項目類型。"); else if (!ctx.itemTypeIds.includes(draft.itemTypeId)) add("basic", "項目類型不存在。");
   if (!isOrder(draft.order)) add("basic", `順序須為 1–${ORDER_MAX} 的整數。`);
   if (ctx.original && ctx.usage && isLocked(ctx.usage)) {
-    if (draft.inspectionType !== ctx.original.inspectionType) add("basic", "已被巡查模板使用，巡查類型不可修改。");
-    if (draft.inputKind !== ctx.original.inputKind) add("input", "已被巡查模板使用，輸入方式不可修改。");
+    if (draft.inspectionType !== ctx.original.inspectionType) add("basic", "已被巡查計劃模板使用，巡查類型不可修改。");
+    if (draft.inputKind !== ctx.original.inputKind) add("input", "已被巡查計劃模板使用，輸入方式不可修改。");
   }
   if (draft.status === "失效" && ctx.usage) { const blocked = deactivationBlock(ctx.usage); if (blocked) add("basic", blocked); }
 

@@ -34,7 +34,7 @@ import type { NavItem } from "./types";
 
 const routeLabels: Record<string, string> = {
   "/workbench": "營運工作台", "/auth/users": "用戶管理", "/auth/groups": "群組管理", "/auth/roles": "角色與權限", "/auth/rules": "權限校驗規則",
-  "/config/grids": "網格管理", "/config/inspection-types": "巡查類型", "/config/items": "巡查項目", "/config/objects": "對象管理", "/config/objects/new": "新增對象", "/config/templates": "巡查模板", "/config/nfc": "NFC 標籤", "/plans": "巡查計劃", "/plans/new": "新增計劃", "/inspections": "巡查記錄", "/inspections/new": "新增巡查", "/events": "事件管理", "/events/new": "新增事件", "/events/types": "事件類型",
+  "/config/grids": "網格管理", "/config/inspection-types": "巡查類型", "/config/items": "巡查項目", "/config/objects": "對象管理", "/config/objects/new": "新增對象", "/config/templates": "巡查計劃模板", "/config/nfc": "NFC 標籤", "/plans": "巡查計劃", "/plans/new": "新增計劃", "/inspections": "巡查記錄", "/inspections/new": "新增巡查", "/events": "事件管理", "/events/new": "新增事件", "/events/types": "事件類型",
   "/works": "工作管理", "/works/new": "新增工作", "/works/types": "工作類型", "/works/sla": "服務承諾", "/works/comments": "留言模板", "/works/duplicates": "重複工作",
   "/notifications": "通知中心", "/notifications/rules": "通知規則", "/reports": "營運報表", "/reports/designer": "自訂報表", "/reports/import": "資料匯入", "/reports/export": "匯出中心", "/reports/documents": "文書模板",
   "/system/devices": "裝置管理", "/system/versions": "應用版本", "/system/logs": "日誌查詢", "/system/parameters": "系統參數", "/system/attachments": "附件限制", "/integrations": "整合中心",
@@ -46,7 +46,7 @@ const navGroups: NavItem[] = [
     { key: "plans", label: "巡查計劃", path: "/plans" }, { key: "inspections", label: "巡查記錄", path: "/inspections" }, { key: "events", label: "事件管理", path: "/events" }, { key: "works", label: "工作管理", path: "/works" },
   ] },
   { key: "config", label: "基礎配置", icon: <BuildOutlined />, children: [
-    { key: "grids", label: "網格管理", path: "/config/grids" }, { key: "types", label: "巡查類型", path: "/config/inspection-types" }, { key: "items", label: "巡查項目", path: "/config/items" }, { key: "objects", label: "對象管理", path: "/config/objects" }, { key: "templates", label: "巡查模板", path: "/config/templates" }, { key: "nfc", label: "NFC 標籤", path: "/config/nfc" }, ] },
+    { key: "grids", label: "網格管理", path: "/config/grids" }, { key: "types", label: "巡查類型", path: "/config/inspection-types" }, { key: "items", label: "巡查項目", path: "/config/items" }, { key: "objects", label: "對象管理", path: "/config/objects" }, { key: "templates", label: "巡查計劃模板", path: "/config/templates" }, { key: "nfc", label: "NFC 標籤", path: "/config/nfc" }, ] },
   { key: "org", label: "權限與組織", icon: <TeamOutlined />, children: [
     { key: "users", label: "用戶管理", path: "/auth/users" }, { key: "groups", label: "群組管理", path: "/auth/groups" }, { key: "roles", label: "角色與權限", path: "/auth/roles" }, { key: "rules", label: "校驗規則", path: "/auth/rules" },
   ] },

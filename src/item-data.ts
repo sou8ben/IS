@@ -106,7 +106,7 @@ export function seedItems(): ManagedItem[] {
 }
 
 // ---- 即時登記（與後台共用狀態同步） ----
-// The App's inspection forms are generated from the back-office 巡查模板 (items, required, attachments, location settings) with the
+// The App's inspection forms are generated from the back-office 巡查計劃模板 (items, required, attachments, location settings) with the
 // managed 巡查項目 fields. Items of the original App templates keep their result keys (e.g. "seat"), so seed results line up.
 let items: ManagedItem[] = seedItems();
 let types: ItemTypeRecord[] = seedItemTypes();
@@ -148,7 +148,7 @@ export const getItems = () => items;
 export const getItemTypes = () => types;
 /** The managed items as template-catalog rows (category = item type name), for the template page and its rules. */
 export const catalogView = (list: ManagedItem[] = items): CatalogItem[] => list.map((item) => ({ id: item.id, code: item.code, name: item.name, inspectionType: item.inspectionType, category: itemTypeName(item.itemTypeId), inputKind: item.inputKind }));
-/** Every 巡查模板 as an App inspection form (including 失效 ones, so existing inspections keep resolving). */
+/** Every 巡查計劃模板 as an App inspection form (including 失效 ones, so existing inspections keep resolving). */
 export const liveAppTemplates = () => live;
 /** 生效 templates: what pickers offer for new inspections and plans. */
 export const activeAppTemplates = () => live.filter((template) => template.status !== "失效");

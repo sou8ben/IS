@@ -6,9 +6,9 @@ export type InspectionSource = PlannedSource | "現場建立";
 export type PlanStatus = "未開始" | "進行中" | "已中止" | "已完成";
 
 /**
- * Copy of the plan's 巡查模板 and chosen objects taken when the plan is created; later template edits never change it.
+ * Copy of the plan's 巡查計劃模板 and chosen objects taken when the plan is created; later template edits never change it.
  * `items` are the template's inspection items at creation, which the App gives to the plan's inspections.
- * (Plans created before 巡查模板 drove plans carry a plan-template `version` and `bufferM` instead of `templateUpdatedAt`.)
+ * (Plans created before 巡查計劃模板 drove plans carry a plan-template `version` and `bufferM` instead of `templateUpdatedAt`.)
  */
 export interface PlanSnapshot<I = unknown> {
   templateId: string;
@@ -117,10 +117,10 @@ export function validatePlanForm(form: PlanForm): string[] {
   const name = form.name.trim();
   if (!name) errors.push("請輸入計劃名稱。");
   else if ([...name].length > 50) errors.push("計劃名稱不可超過 50 字。");
-  if (!form.templateId) errors.push("請選擇巡查模板。");
+  if (!form.templateId) errors.push("請選擇巡查計劃模板。");
   if (form.objectIds && !form.objectIds.length) errors.push("請選擇至少 1 個巡查對象。");
   if (!form.groupId) errors.push("請選擇巡查群組。");
-  else if (form.allowedGroupIds?.length && !form.allowedGroupIds.includes(form.groupId)) errors.push("所選巡查群組不在巡查模板的適用群組內。");
+  else if (form.allowedGroupIds?.length && !form.allowedGroupIds.includes(form.groupId)) errors.push("所選巡查群組不在巡查計劃模板的適用群組內。");
   if (!form.startAt || !form.endAt) errors.push("請填寫開始及結束時間。");
   else if (form.endAt.replace("T", " ") <= form.startAt.replace("T", " ")) errors.push("結束時間須晚於開始時間。");
   return errors;

@@ -44,7 +44,7 @@ export function InspectionTypeListPage() {
     { key: "viewGroupName", title: "工作 - 預設查看群組", width: 170 },
     { key: "executeGroupName", title: "工作 - 預設執行群組", width: 170 },
     { key: "objects", title: "下屬對象", width: 100, render: (type) => `${type.objects} 個` },
-    { key: "templates", title: "下屬巡查模板", width: 130, render: (type) => `${type.templates} 個` },
+    { key: "templates", title: "下屬巡查計劃模板", width: 150, render: (type) => `${type.templates} 個` },
     { key: "items", title: "下屬巡查項目", width: 130, render: (type) => `${type.items} 個` },
     { key: "status", title: "狀態", width: 90, render: (type) => <StatusTag tone={type.status === "生效" ? "success" : "neutral"}>{type.status}</StatusTag> },
     { key: "updatedBy", title: "更新人", width: 100 },
@@ -103,8 +103,8 @@ export function TypeDrawer({ type, onClose, onSaved }: { type?: InspectionTypeRe
       {errors.length > 0 && <div className="evt-error" role="alert"><strong>請修正以下 {errors.length} 項</strong><ol>{errors.map((message, index) => <li key={index}>{message}</li>)}</ol></div>}
       <div className="evt-form">
         <section className="group-editor-section"><header><h3>類型資料</h3></header><div className="group-editor-grid">
-          <Field label="類型名稱" required hint={locked ? renameBlockReason(usage) ?? undefined : "1–50 字，不可重複；已被對象、模板或項目使用後不可修改"}><input value={locked ? type!.name : name} maxLength={50} disabled={locked} onChange={(event) => change(() => setName(event.target.value))} placeholder="例如 公園設施巡查" /></Field>
-          <div className="field"><span>狀態</span><div className="switch-row"><label className="switch-control"><input type="checkbox" aria-label="類型生效" checked={status === "生效"} onChange={(event) => toggleStatus(event.target.checked)} /><span className="switch" /></label><span className="switch-label">{status}</span></div><small>仍有啟用中的對象或生效中的模板時不可設為失效</small></div>
+          <Field label="類型名稱" required hint={locked ? renameBlockReason(usage) ?? undefined : "1–50 字，不可重複；已被對象、巡查計劃模板或項目使用後不可修改"}><input value={locked ? type!.name : name} maxLength={50} disabled={locked} onChange={(event) => change(() => setName(event.target.value))} placeholder="例如 公園設施巡查" /></Field>
+          <div className="field"><span>狀態</span><div className="switch-row"><label className="switch-control"><input type="checkbox" aria-label="類型生效" checked={status === "生效"} onChange={(event) => toggleStatus(event.target.checked)} /><span className="switch" /></label><span className="switch-label">{status}</span></div><small>仍有啟用中的對象或生效中的巡查計劃模板時不可設為失效</small></div>
           <div className="type-flag-row">
             <YesNoField label="按步驟巡查" value={stepByStep} onChange={(value) => change(() => setStepByStep(value))} />
             <YesNoField label="嚴格工作流程" value={strictWorkflow} onChange={(value) => change(() => setStrictWorkflow(value))} />

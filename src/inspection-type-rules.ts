@@ -41,13 +41,13 @@ export function usageOf(name: string, objects: { inspectionType: string; status:
 export const canRename = (usage: TypeUsage) => usage.objects + usage.templates + usage.items === 0;
 export function renameBlockReason(usage: TypeUsage): string | null {
   if (canRename(usage)) return null;
-  const parts = [usage.objects && `${usage.objects} 個對象`, usage.templates && `${usage.templates} 個巡查模板`, usage.items && `${usage.items} 個巡查項目`].filter(Boolean);
+  const parts = [usage.objects && `${usage.objects} 個對象`, usage.templates && `${usage.templates} 個巡查計劃模板`, usage.items && `${usage.items} 個巡查項目`].filter(Boolean);
   return `此類型已有 ${parts.join("、")} 使用，名稱不可修改；如不再使用請改為失效。`;
 }
 /** A type cannot become 失效 while it has active objects or templates. */
 export function deactivationBlock(usage: TypeUsage): string | null {
   if (!usage.activeObjects && !usage.activeTemplates) return null;
-  const parts = [usage.activeObjects && `${usage.activeObjects} 個啟用中的對象`, usage.activeTemplates && `${usage.activeTemplates} 個生效中的巡查模板`].filter(Boolean);
+  const parts = [usage.activeObjects && `${usage.activeObjects} 個啟用中的對象`, usage.activeTemplates && `${usage.activeTemplates} 個生效中的巡查計劃模板`].filter(Boolean);
   return `此類型仍有 ${parts.join("及 ")}，請先將它們停用／失效後，再將類型設為失效。`;
 }
 

@@ -51,7 +51,7 @@ test("plan form requires name, template, group and a valid time window", () => {
   assert.deepEqual(validatePlanForm(form()), []);
   assert.ok(validatePlanForm(form({ name: " " })).some((e) => e.includes("計劃名稱")));
   assert.ok(validatePlanForm(form({ name: "長".repeat(51) })).some((e) => e.includes("50 字")));
-  assert.ok(validatePlanForm(form({ templateId: "" })).some((e) => e.includes("巡查模板")));
+  assert.ok(validatePlanForm(form({ templateId: "" })).some((e) => e.includes("巡查計劃模板")));
   assert.ok(validatePlanForm(form({ groupId: "" })).some((e) => e.includes("巡查群組")));
   assert.ok(validatePlanForm(form({ endAt: "2026-09-30T09:00" })).some((e) => e.includes("晚於")));
   assert.deepEqual(validatePlanForm(form({ startAt: "2026-09-30 09:00", endAt: "2026-09-30T10:00" })), []);

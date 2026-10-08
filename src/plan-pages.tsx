@@ -29,8 +29,8 @@ const fromInput = (text: string) => text.replace("T", " ");
 const contains = (value: string, query: string) => !query.trim() || value.toLowerCase().includes(query.trim().toLowerCase());
 const unique = (values: string[]) => [...new Set(values)];
 const sourceTone: Record<string, "neutral" | "info" | "warning" | "success"> = { "計劃模板": "neutral", "額外加入": "info", "補入": "warning", "現場建立": "success" };
-/** Inspections generated when the plan was created are stored with source 計劃模板; they come from the plan's 巡查模板. */
-const sourceLabel = (source: string) => source === "計劃模板" ? "按巡查模板" : source;
+/** Inspections generated when the plan was created are stored with source 計劃模板; they come from the plan's 巡查計劃模板. */
+const sourceLabel = (source: string) => source === "計劃模板" ? "按巡查計劃模板" : source;
 const eventTypes = ["公共設施異常／座椅", "公共設施異常／照明", "環境衛生／積水", "綠化問題／樹木", "道路通行問題／路面"];
 const workTypes = ["公共設施／座椅", "公共設施／照明", "環境衛生／收集設施", "綠化／樹木", "道路設施／路面"];
 
@@ -80,7 +80,7 @@ export function PlanListPage() {
   const columns: Column<Plan>[] = ([
     { key: "id", title: "計劃編號", width: 170 },
     { key: "name", title: "計劃名稱", width: 230 },
-    { key: "template", title: "巡查模板", width: 170 },
+    { key: "template", title: "巡查計劃模板", width: 190 },
     { key: "group", title: "巡查群組", width: 130 },
     { key: "executor", title: "預設巡查人員", width: 120, render: (plan) => plan.executor ?? "—", sortValue: (plan) => plan.executor ?? "" },
     { key: "startAt", title: "開始時間", width: 150 },
@@ -95,7 +95,7 @@ export function PlanListPage() {
       <div className="filter-bar plan-filter-bar">
         <label className="filter-field"><span>計劃編號</span><input aria-label="計劃編號" value={filters.id} onChange={(event) => filter("id", event.target.value)} placeholder="請輸入計劃編號" /></label>
         <label className="filter-field"><span>計劃名稱</span><input aria-label="計劃名稱" value={filters.name} onChange={(event) => filter("name", event.target.value)} placeholder="請輸入計劃名稱" /></label>
-        <label className="filter-field"><span>巡查模板</span><Select ariaLabel="巡查模板" value={filters.template} onChange={(value) => filter("template", value)}><option value="">全部巡查模板</option>{unique([...inspectionTemplates.map((template) => template.name), ...plans.map((plan) => plan.template)]).map((name) => <option key={name}>{name}</option>)}</Select></label>
+        <label className="filter-field"><span>巡查計劃模板</span><Select ariaLabel="巡查計劃模板" value={filters.template} onChange={(value) => filter("template", value)}><option value="">全部巡查計劃模板</option>{unique([...inspectionTemplates.map((template) => template.name), ...plans.map((plan) => plan.template)]).map((name) => <option key={name}>{name}</option>)}</Select></label>
         <label className="filter-field"><span>巡查群組</span><Select ariaLabel="巡查群組" value={filters.group} onChange={(value) => filter("group", value)}><option value="">全部巡查群組</option>{unique([...inspectionGroups.map((group) => group.name), ...plans.map((plan) => plan.group)]).map((name) => <option key={name}>{name}</option>)}</Select></label>
         <label className="filter-field"><span>狀態</span><Select ariaLabel="狀態" value={filters.status} onChange={(value) => filter("status", value)}><option value="">全部狀態</option><option>未開始</option><option>進行中</option><option>已中止</option><option>已完成</option></Select></label>
         <label className="filter-field"><span>開始日期（由）</span><input aria-label="開始日期由" type="date" value={filters.from} onChange={(event) => filter("from", event.target.value)} /></label>
@@ -149,7 +149,7 @@ export function PlanCreatePage() {
     const usedIds = [...app.inspections.map((item) => item.id), ...plans.flatMap((plan) => (plan.inspections ?? []).map((item) => item.id))];
     const inspections = buildPlannedInspections(snapshot, usedIds, dateKey(startAt));
     const id = nextIds("PL", plans.map((plan) => plan.id), dateKey(startAt), 1)[0];
-    const log: PlanChange = { time, operator: identity.name, action: "建立計劃", detail: `以巡查模板「${template.name}」（${template.items.length} 個巡查項目）及 ${objectIds.length} 個對象建立，產生 ${inspections.length} 個巡查` };
+    const log: PlanChange = { time, operator: identity.name, action: "建立計劃", detail: `以巡查計劃模板「${template.name}」（${template.items.length} 個巡查項目）及 ${objectIds.length} 個對象建立，產生 ${inspections.length} 個巡查` };
     addPlan({ id, name: form.name.trim(), template: template.name, templateId: template.id, group: group.name, groupId: group.id, status: "未開始", startAt, endAt: fromInput(form.endAt), executor: form.executor || undefined, progress: 0, total: inspections.length, grid, department: group.department, objectIds, note: form.note.trim() || undefined, snapshot, inspections, changes: [log], createdBy: identity.name, createdAt: time });
     showToast(`計劃已建立，產生 ${inspections.length} 個巡查`);
     navigate(`/plans/${id}`);
@@ -163,16 +163,16 @@ export function PlanCreatePage() {
         <FormError errors={errors} />
         <section className="panel form-section"><header><h2>計劃設定</h2></header><div className="form-grid two-col">
           <Field label="計劃名稱" required><input value={form.name} maxLength={50} onChange={(event) => change({ name: event.target.value })} placeholder="請輸入計劃名稱" /></Field>
-          <Field label="巡查模板" required hint="計劃的巡查按此模板填寫；建立時保存模板快照，之後模板更改不影響此計劃"><Select ariaLabel="巡查模板" value={form.templateId} onChange={changeTemplate}><option value="">請選擇巡查模板</option>{templates.map((item) => <option key={item.id} value={item.id}>{item.name}（{item.inspectionType}）</option>)}</Select></Field>
+          <Field label="巡查計劃模板" required hint="計劃的巡查按此巡查計劃模板填寫；建立時保存快照，之後巡查計劃模板更改不影響此計劃"><Select ariaLabel="巡查計劃模板" value={form.templateId} onChange={changeTemplate}><option value="">請選擇巡查計劃模板</option>{templates.map((item) => <option key={item.id} value={item.id}>{item.name}（{item.inspectionType}）</option>)}</Select></Field>
           <Field label="開始時間" required><input type="datetime-local" value={form.startAt} onChange={(event) => change({ startAt: event.target.value })} /></Field>
           <Field label="結束時間" required><input type="datetime-local" value={form.endAt} onChange={(event) => change({ endAt: event.target.value })} /></Field>
-          <Field label="巡查群組" required hint={record?.groups.length ? "只列出巡查模板的適用巡查群組" : "巡查模板適用全部巡查群組"}><GroupSelect value={form.groupId} onChange={changeGroup} groups={allowedGroups} /></Field>
+          <Field label="巡查群組" required hint={record?.groups.length ? "只列出巡查計劃模板的適用巡查群組" : "巡查計劃模板適用全部巡查群組"}><GroupSelect value={form.groupId} onChange={changeGroup} groups={allowedGroups} /></Field>
           <Field label="預設巡查人員"><ExecutorSelect groupId={form.groupId} value={form.executor} onChange={(executor) => change({ executor })} /></Field>
           <Field label="附屬部門" hint="取自巡查群組"><input value={group?.department ?? ""} disabled /></Field>
           <Field label="所屬網格" hint="所選對象最多所在的網格"><input value={grid} disabled /></Field>
           <Field label="備註"><textarea rows={3} value={form.note} onChange={(event) => change({ note: event.target.value })} placeholder="選填" /></Field>
         </div></section>
-        <section className="panel form-section plan-object-section"><header><h2>巡查對象</h2><span>{template ? (template.objectIds?.length ? `模板指定 ${template.objectIds.length} 個對象` : `模板適用「${template.inspectionType}」下全部對象`) : ""} · 已選 {objectIds.length} 個</span></header>
+        <section className="panel form-section plan-object-section"><header><h2>巡查對象</h2><span>{template ? (template.objectIds?.length ? `巡查計劃模板指定 ${template.objectIds.length} 個對象` : `巡查計劃模板適用「${template.inspectionType}」下全部對象`) : ""} · 已選 {objectIds.length} 個</span></header>
           {template ? <>
             <div className="plan-object-toolbar">
               <Select ariaLabel="按網格篩選" value={gridFilter} onChange={setGridFilter}><option value="">全部網格</option>{unique(candidates.map((object) => object.grid)).map((name) => <option key={name}>{name}</option>)}</Select>
@@ -180,8 +180,8 @@ export function PlanCreatePage() {
               <label className="plan-object-all"><input type="checkbox" checked={allVisible} disabled={!visible.length} onChange={toggleAll} />全選結果（{visible.length}）</label>
             </div>
             <ul className="plan-object-list">{visible.map((object) => <li key={object.id}><label><input type="checkbox" checked={objectIds.includes(object.id)} onChange={() => setObjects(objectIds.includes(object.id) ? objectIds.filter((id) => id !== object.id) : [...objectIds, object.id])} /><span><strong>{object.name}</strong><small>{object.id} · {object.grid} · {object.address}</small></span></label></li>)}
-              {!visible.length && <li className="plan-object-empty">{candidates.length ? "沒有符合篩選的對象" : "此巡查模板沒有可用的生效對象"}</li>}</ul>
-          </> : <p className="plan-hint">請先選擇巡查模板。</p>}
+              {!visible.length && <li className="plan-object-empty">{candidates.length ? "沒有符合篩選的對象" : "此巡查計劃模板沒有可用的生效對象"}</li>}</ul>
+          </> : <p className="plan-hint">請先選擇巡查計劃模板。</p>}
         </section>
         <section className="panel form-section"><header><h2>權限校驗資料（示範）</h2></header><div className="form-grid">
           <IdentityField value={identityId} onChange={(value) => { setIdentityId(value); setErrors([]); }} />
@@ -191,10 +191,10 @@ export function PlanCreatePage() {
         </div></section>
       </div>
       <section className="panel plan-preview-panel">
-        <header><div><h2>計劃預覽</h2><p>{template && record ? `${record.code} · ${template.inspectionType} · ${template.items.length} 個巡查項目 · 更新於 ${record.updatedAt}` : "請選擇巡查模板"}</p></div><span className="plan-preview-count">{objectIds.length} 個巡查</span></header>
+        <header><div><h2>計劃預覽</h2><p>{template && record ? `${record.code} · ${template.inspectionType} · ${template.items.length} 個巡查項目 · 更新於 ${record.updatedAt}` : "請選擇巡查計劃模板"}</p></div><span className="plan-preview-count">{objectIds.length} 個巡查</span></header>
         {template && <div className="plan-preview-stats"><div><span>巡查對象</span><strong>{objectIds.length}</strong></div><div><span>產生巡查</span><strong>{objectIds.length}</strong></div><div><span>路線長度</span><strong>{trackMeters(route)} 米</strong></div><div><span>定位檢查</span><strong>{template.locationCheck ? `${template.validDistance} 米` : "關閉"}</strong></div></div>}
         <PlanMap className="plan-preview-map" route={route} markers={markers} selected={selected} onSelect={setSelected} fitKey={`${form.templateId}-${objectIds.length}`} legend={<><LegendItem tone="route">巡查路線（按對象次序）</LegendItem><LegendItem tone="object">巡查對象</LegendItem></>} />
-        <div className="plan-preview-table"><table className="dense-table fluid"><thead><tr><th style={{ width: 52 }}>序號</th><th>巡查對象</th><th style={{ width: 150 }}>地址</th><th style={{ width: 140 }}>巡查模板</th><th style={{ width: 140 }}>次序</th></tr></thead><tbody>
+        <div className="plan-preview-table"><table className="dense-table fluid"><thead><tr><th style={{ width: 52 }}>序號</th><th>巡查對象</th><th style={{ width: 150 }}>地址</th><th style={{ width: 160 }}>巡查計劃模板</th><th style={{ width: 140 }}>次序</th></tr></thead><tbody>
           {chosen.map((object, index) => <tr key={object.id} className={`clickable ${selected === object.id ? "selected" : ""}`} onClick={() => setSelected(object.id)}><td>{index + 1}</td><td>{object.name}</td><td title={object.address}>{object.address}</td><td>{template?.name}</td>
             <td onClick={(event) => event.stopPropagation()}><span className="obj-def-actions"><button type="button" aria-label="上移" disabled={index === 0} onClick={() => move(index, -1)}><ArrowUpOutlined /></button><button type="button" aria-label="下移" disabled={index === chosen.length - 1} onClick={() => move(index, 1)}><ArrowDownOutlined /></button><button type="button" aria-label={`移除 ${object.name}`} onClick={() => setObjects(objectIds.filter((id) => id !== object.id))}><CloseOutlined /></button></span></td></tr>)}
           {!chosen.length && <tr><td colSpan={5} className="plan-object-empty">請在左側勾選巡查對象；路線按此處次序連線</td></tr>}
@@ -264,7 +264,7 @@ function PlanDetail({ plan }: { plan: Plan }) {
     const decision = authorize("create-plan", { request: planRequest(groupIdOf(plan), unique(rows.map((row) => row.objectId))) }, identity);
     if (!decision.allowed) { showToast(`權限校驗未通過：${decision.reason}`, "error"); return; }
     const entries = objectIds.filter((objectId) => !rows.some((row) => row.objectId === objectId && row.templateId === extraTemplate)).map((objectId) => ({ objectId, templateId: extraTemplate }));
-    if (!entries.length) { showToast("所選對象已有相同巡查模板的巡查", "error"); return; }
+    if (!entries.length) { showToast("所選對象已有相同巡查計劃模板的巡查", "error"); return; }
     const added = appendInspections(entries, usedIds, dateKey(plan.startAt), nextSeq, "額外加入", { addedBy: identity.name, addedAt: nowText() });
     updatePlan(plan.id, { inspections: [...(plan.inspections ?? []), ...added], total: rows.length + added.length, changes: log("增加巡查", `額外加入 ${added.length} 個巡查（${inspectionTemplateName(extraTemplate)}）`, identity.name) });
     setDrawer(null); showToast(`已增加 ${added.length} 個巡查`);
@@ -279,7 +279,7 @@ function PlanDetail({ plan }: { plan: Plan }) {
     { key: "seq", title: "序號", width: 64, sortable: true },
     { key: "id", title: "巡查編號", width: 160, sortable: true },
     { key: "objectId", title: "巡查對象", width: 190, render: (row) => objectOf(row.objectId)?.name ?? row.objectId, sortable: true, sortValue: (row) => objectOf(row.objectId)?.name ?? "" },
-    { key: "templateId", title: "巡查模板", width: 170, render: (row) => inspectionTemplateName(row.templateId), sortable: true, sortValue: (row) => inspectionTemplateName(row.templateId) },
+    { key: "templateId", title: "巡查計劃模板", width: 190, render: (row) => inspectionTemplateName(row.templateId), sortable: true, sortValue: (row) => inspectionTemplateName(row.templateId) },
     { key: "source", title: "來源", width: 104, render: (row) => <StatusTag tone={sourceTone[row.source]}>{sourceLabel(row.source)}</StatusTag>, sortable: true, sortValue: (row) => sourceLabel(row.source) },
     { key: "status", title: "狀態", width: 90, render: (row) => <>{voidedIds.has(row.id) ? <StatusTag tone="danger">已作廢</StatusTag> : <StatusTag>{row.status}</StatusTag>}</>, sortable: true },
     { key: "result", title: "結果", width: 90, render: (row) => { const result = resultOf(row); return <StatusTag tone={result === "異常" ? "danger" : result === "正常" ? "success" : "neutral"}>{result}</StatusTag>; }, sortable: true, sortValue: resultOf },
@@ -318,12 +318,12 @@ function PlanDetail({ plan }: { plan: Plan }) {
     </>} />
     <div className="status-strip plan-status-strip">
       <div><span>計劃編號</span><strong>{plan.id}</strong></div><div><span>狀態</span><StatusTag>{plan.status}</StatusTag></div>
-      <div><span>巡查模板</span><strong>{currentTemplate ? <Link to={`/config/templates?template=${currentTemplate.id}`}>{plan.template}</Link> : plan.template}{snapshot ? "（建立時快照）" : ""}</strong></div><div><span>巡查群組</span><strong>{plan.group}</strong></div>
+      <div><span>巡查計劃模板</span><strong>{currentTemplate ? <Link to={`/config/templates?template=${currentTemplate.id}`}>{plan.template}</Link> : plan.template}{snapshot ? "（建立時快照）" : ""}</strong></div><div><span>巡查群組</span><strong>{plan.group}</strong></div>
       <div><span>預設巡查人員</span><strong>{plan.executor ?? "未指定"}</strong></div><div><span>計劃時間</span><strong>{plan.startAt} – {plan.endAt.slice(11)}</strong></div>
       <div><span>完成進度</span><ProgressCell done={done} total={countedRows.length} /></div>
     </div>
-    {templateChanged && currentTemplate && snapshot && <div className="plan-snapshot-note"><InfoCircleOutlined /><span>巡查模板「{currentTemplate.name}」已於 {currentTemplate.updatedAt} 更新；本計劃沿用建立時的快照（{snapshot.objects.length} 個對象{snapshot.items ? `、${snapshot.items.length} 個巡查項目` : ""}），{snapshot.items ? "計劃內的巡查不受模板更改影響。" : "此計劃早於模板快照功能建立，未提交的巡查按目前模板填寫。"}</span></div>}
-    {!snapshot && <div className="plan-snapshot-note"><InfoCircleOutlined /><span>此計劃沒有巡查模板快照，地圖只顯示事件、工作及軌跡。</span></div>}
+    {templateChanged && currentTemplate && snapshot && <div className="plan-snapshot-note"><InfoCircleOutlined /><span>巡查計劃模板「{currentTemplate.name}」已於 {currentTemplate.updatedAt} 更新；本計劃沿用建立時的快照（{snapshot.objects.length} 個對象{snapshot.items ? `、${snapshot.items.length} 個巡查項目` : ""}），{snapshot.items ? "計劃內的巡查不受巡查計劃模板更改影響。" : "此計劃早於快照功能建立，未提交的巡查按目前巡查計劃模板填寫。"}</span></div>}
+    {!snapshot && <div className="plan-snapshot-note"><InfoCircleOutlined /><span>此計劃沒有巡查計劃模板快照，地圖只顯示事件、工作及軌跡。</span></div>}
     <section className="panel plan-map-panel"><PlanMap route={layers.route ? snapshot?.route : undefined} markers={markers} tracks={visibleTracks} layers={chips} onToggleLayer={(key) => setLayers((current) => ({ ...current, [key]: !current[key] }))} selected={selected} onSelect={select} fitKey={plan.id}
       legend={<><LegendItem tone="route">計劃路線</LegendItem><LegendItem tone="todo">未巡查</LegendItem><LegendItem tone="done">已完成</LegendItem><LegendItem tone="issue">有異常</LegendItem><LegendItem tone="event">事件</LegendItem><LegendItem tone="work">工作</LegendItem><LegendItem tone="track">人員軌跡（示範）</LegendItem></>} /></section>
     <section className="panel tab-panel plan-tab-panel"><nav>{(["巡查", "事件", "工作", "人員軌跡", "作業記錄"] as DetailTab[]).map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}<span>{item === "巡查" ? rows.length : item === "事件" ? planEvents.length : item === "工作" ? planWorks.length : item === "人員軌跡" ? tracks.length : timeline.length}</span></button>)}</nav>
@@ -337,9 +337,9 @@ function PlanDetail({ plan }: { plan: Plan }) {
     </section>
 
     {drawer === "edit" && <EditPlanDrawer plan={plan} objectIds={unique(rows.map((row) => row.objectId))} allowedGroupIds={currentTemplate?.groups} onClose={() => setDrawer(null)} onSave={(patch, detail, operator) => { updatePlan(plan.id, { ...patch, changes: log("編輯計劃", detail, operator) }); setDrawer(null); showToast("計劃已更新"); }} />}
-    {drawer === "add" && <BatchPickerDrawer key={extraTemplate} title="增加巡查" noun="對象" filterLabel="網格" description="選擇巡查模板及其適用對象，為未開始的計劃增加額外巡查。" confirmLabel="增加巡查"
+    {drawer === "add" && <BatchPickerDrawer key={extraTemplate} title="增加巡查" noun="對象" filterLabel="網格" description="選擇巡查計劃模板及其適用對象，為未開始的計劃增加額外巡查。" confirmLabel="增加巡查"
       rows={applicableObjects(extraTemplate).sort((a, b) => Number(b.grid === plan.grid) - Number(a.grid === plan.grid)).map((object) => ({ id: object.id, title: object.name, meta: `${object.id} · ${object.address}`, group: object.grid }))}
-      footer={<div className="form-grid"><Field label="巡查模板" required hint="只列出此模板適用的對象"><Select ariaLabel="額外巡查模板" value={extraTemplate} onChange={setExtraTemplate}>{activeAppTemplates().map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</Select></Field><IdentityField value={extraIdentity} onChange={setExtraIdentity} /></div>}
+      footer={<div className="form-grid"><Field label="巡查計劃模板" required hint="只列出此巡查計劃模板適用的對象"><Select ariaLabel="額外巡查計劃模板" value={extraTemplate} onChange={setExtraTemplate}>{activeAppTemplates().map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</Select></Field><IdentityField value={extraIdentity} onChange={setExtraIdentity} /></div>}
       onClose={() => setDrawer(null)} onConfirm={addExtra} />}
     {drawer === "supplement" && <SupplementInspectionDrawer plan={plan} rows={rows} defaultTemplate={templateId} onClose={() => setDrawer(null)} onSave={(entry, detail) => {
       const added = appendInspections([entry], usedIds, dateKey(plan.startAt), nextSeq, "補入", { status: "已完成", inspector: entry.inspector, submittedAt: entry.submittedAt, result: entry.result, reason: entry.reason, addedBy: signedInUser, addedAt: nowText() });
@@ -387,10 +387,10 @@ function EditPlanDrawer({ plan, objectIds, allowedGroupIds, onClose, onSave }: {
     <FormError errors={errors} />
     <div className="form-grid two-col">
       <Field label="計劃名稱" required><input value={form.name} maxLength={50} onChange={(event) => change({ name: event.target.value })} /></Field>
-      <Field label="巡查模板"><input value={`${plan.template}（快照，不可更改）`} disabled /></Field>
+      <Field label="巡查計劃模板"><input value={`${plan.template}（快照，不可更改）`} disabled /></Field>
       <Field label="開始時間" required><input type="datetime-local" value={form.startAt} onChange={(event) => change({ startAt: event.target.value })} /></Field>
       <Field label="結束時間" required><input type="datetime-local" value={form.endAt} onChange={(event) => change({ endAt: event.target.value })} /></Field>
-      <Field label="巡查群組" required hint={allowedGroupIds?.length ? "只列出巡查模板的適用巡查群組" : undefined}><GroupSelect value={form.groupId} onChange={(groupId) => change({ groupId, executor: "" })} groups={allowedGroupsOf(allowedGroupIds)} /></Field>
+      <Field label="巡查群組" required hint={allowedGroupIds?.length ? "只列出巡查計劃模板的適用巡查群組" : undefined}><GroupSelect value={form.groupId} onChange={(groupId) => change({ groupId, executor: "" })} groups={allowedGroupsOf(allowedGroupIds)} /></Field>
       <Field label="預設巡查人員"><ExecutorSelect groupId={form.groupId} value={form.executor} onChange={(executor) => change({ executor })} /></Field>
       <Field label="備註"><textarea rows={3} value={form.note} onChange={(event) => change({ note: event.target.value })} /></Field>
       <IdentityField value={identityId} onChange={(value) => { setIdentityId(value); setErrors([]); }} />
@@ -415,7 +415,7 @@ function SupplementInspectionDrawer({ plan, rows, defaultTemplate, onClose, onSa
   const [errors, setErrors] = useState<string[]>([]);
   const change = (patch: Partial<typeof form>) => { setForm((current) => ({ ...current, ...patch })); setErrors([]); };
   const save = () => {
-    const found = [!form.objectId && "請選擇巡查對象。", !form.templateId && "請選擇巡查模板。", !form.inspector && "請選擇巡查人員。", !form.submittedAt && "請填寫巡查時間。", !form.reason.trim() && "請填寫補入原因。"].filter((item): item is string => !!item);
+    const found = [!form.objectId && "請選擇巡查對象。", !form.templateId && "請選擇巡查計劃模板。", !form.inspector && "請選擇巡查人員。", !form.submittedAt && "請填寫巡查時間。", !form.reason.trim() && "請填寫補入原因。"].filter((item): item is string => !!item);
     if (found.length) { setErrors(found); return; }
     onSave({ ...form, submittedAt: fromInput(form.submittedAt), reason: form.reason.trim() }, `${objectOf(form.objectId)?.name ?? form.objectId}（${form.result}）；原因：${form.reason.trim()}`);
   };
@@ -423,7 +423,7 @@ function SupplementInspectionDrawer({ plan, rows, defaultTemplate, onClose, onSa
     <FormError errors={errors} />
     <div className="form-grid two-col">
       <Field label="巡查對象" required><Select ariaLabel="補入巡查對象" value={form.objectId} onChange={(objectId) => change({ objectId })}>{options.map((object) => <option key={object.id} value={object.id}>{object.name}（{object.id}）</option>)}</Select></Field>
-      <Field label="巡查模板" required><Select ariaLabel="補入巡查模板" value={form.templateId} onChange={(templateId) => change({ templateId })}>{activeAppTemplates().map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</Select></Field>
+      <Field label="巡查計劃模板" required><Select ariaLabel="補入巡查計劃模板" value={form.templateId} onChange={(templateId) => change({ templateId })}>{activeAppTemplates().map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</Select></Field>
       <Field label="巡查人員" required><Select ariaLabel="補入巡查人員" value={form.inspector} onChange={(inspector) => change({ inspector })}>{people.map((name) => <option key={name}>{name}</option>)}</Select></Field>
       <Field label="巡查時間" required><input type="datetime-local" value={form.submittedAt} onChange={(event) => change({ submittedAt: event.target.value })} /></Field>
       <Field label="巡查結果" required><Select ariaLabel="補入巡查結果" value={form.result} onChange={(result) => change({ result: result as "正常" | "異常" })}><option>正常</option><option>異常</option></Select></Field>

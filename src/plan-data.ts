@@ -9,11 +9,11 @@ import type { EventRecord, Plan, Work } from "./types";
 
 export const APP_STATE_KEY = "is-app-demo-v1";
 
-/** The 巡查模板 a plan uses: its own id, else (older plans) the template its snapshot's objects use, else the seed plan's template. */
+/** The 巡查計劃模板 a plan uses: its own id, else (older plans) the template its snapshot's objects use, else the seed plan's template. */
 export function templateIdOfPlan(plan: Pick<Plan, "id" | "templateId" | "snapshot">): string {
   return plan.templateId ?? (plan.snapshot && !plan.snapshot.templateId.startsWith("PT") ? plan.snapshot.templateId : plan.snapshot?.objects[0]?.templateIds[0]) ?? planTemplateOf[plan.id] ?? "";
 }
-/** Brings a stored plan up to date: plans made from the retired plan templates get their 巡查模板 id and name. */
+/** Brings a stored plan up to date: plans made from the retired plan templates get their 巡查計劃模板 id and name. */
 export function normalizePlan(plan: Plan): Plan {
   if (plan.templateId) return plan;
   const templateId = templateIdOfPlan(plan);
@@ -28,13 +28,13 @@ export function snapshotOf(plan: Plan): PlanSnapshot<TemplateItem> | undefined {
   return { templateId, templateName: inspectionTemplateName(templateId), route: planRoutes[plan.id], objects: (planObjects[plan.id] ?? []).map((object) => ({ objectId: object.id, templateIds: [templateId] })), takenAt: plan.createdAt ?? plan.startAt.slice(0, 10) };
 }
 
-/** Objects a 巡查模板 can be planned for: active managed objects of its inspection type, limited to its listed objects when it lists any (in that order). */
+/** Objects a 巡查計劃模板 can be planned for: active managed objects of its inspection type, limited to its listed objects when it lists any (in that order). */
 export function planCandidates(template: Pick<AppTemplate, "inspectionType" | "objectIds">): MapObject[] {
   const managed = getManagedObjects().filter((object) => object.status === "啟用" && object.inspectionType === template.inspectionType);
   const listed = template.objectIds?.length ? template.objectIds.flatMap((id) => managed.filter((object) => object.id === id)) : managed;
   return listed.flatMap((object) => getObject(object.id) ?? []);
 }
-/** Snapshot of a 巡查模板 and the chosen objects (in route order) when a plan is created. */
+/** Snapshot of a 巡查計劃模板 and the chosen objects (in route order) when a plan is created. */
 export function snapshotFromTemplate(template: AppTemplate, templateUpdatedAt: string, objectIds: string[], takenAt: string): PlanSnapshot<TemplateItem> {
   const route = objectIds.flatMap((id): Point[] => { const object = getObject(id); return object ? [[object.x, object.y]] : []; });
   return { templateId: template.id, templateName: template.name, templateUpdatedAt, route, objects: objectIds.map((objectId) => ({ objectId, templateIds: [template.id] })), items: structuredClone(template.items), takenAt };
@@ -42,7 +42,7 @@ export function snapshotFromTemplate(template: AppTemplate, templateUpdatedAt: s
 
 export const groupMembers = (groupName: string) => directory.filter((person) => person.dept === groupName).map((person) => person.name);
 export const objectOf = (id: string) => getObject(id);
-/** The 巡查模板 as App inspection forms (all, and the 生效 ones pickers offer). */
+/** The 巡查計劃模板 as App inspection forms (all, and the 生效 ones pickers offer). */
 export { activeAppTemplates, inspectionTemplateName, liveAppTemplates };
 /** Active managed objects: what pickers offer. */
 export const getAllObjects = () => getObjects();

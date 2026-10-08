@@ -63,7 +63,7 @@ export function storedFor(resolved: InspectionRecord, stored: InspectionRecord |
 export const workInspectionOf = (work: Work) => ({ inspectionId: work.inspectionId ?? workMeta[work.id]?.inspectionId, itemKey: work.inspectionItem ?? workMeta[work.id]?.inspectionItem });
 export const worksOfInspection = (works: Work[], inspectionId: string, appLinks: { inspectionId: string; itemKey?: string; workId: string }[] = []) => works.filter((work) => !work.pendingSync && !work.voided && (workInspectionOf(work).inspectionId === inspectionId || appLinks.some((link) => link.inspectionId === inspectionId && link.workId === work.id)));
 
-/** 生效 巡查模板 that apply to an object: its inspection type, and the template lists no objects or lists this one. */
+/** 生效 巡查計劃模板 that apply to an object: its inspection type, and the template lists no objects or lists this one. */
 export function templatesForObject(objectId: string) {
   const managed = getManagedObjects().find((object) => object.id === objectId);
   return managed ? activeAppTemplates().filter((template) => templateAppliesTo(template, managed)) : [];

@@ -133,8 +133,8 @@ function ItemsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: (p
           <td><button type="button" className="tpl-remove" onClick={() => remove([setting.itemId])}>移除</button></td>
         </tr>)];
       })}</tbody>
-    </table>{!visibleGroups.length && <div className="tpl-empty">{draft.items.length ? "沒有符合搜尋的項目" : "尚未加入巡查項目，模板至少需要 1 項"}</div>}</div>
-    {picker && <BatchPickerDrawer title="批量新增巡查項目" noun="巡查項目" description="搜尋及複選同類型巡查項目，一次加入模板。" filterLabel="項目類型" grouped rows={candidates.map((item) => ({ id: item.id, title: item.name, meta: `${item.code} · ${item.inputKind}`, group: item.category }))} onClose={() => setPicker(false)} onConfirm={add} />}
+    </table>{!visibleGroups.length && <div className="tpl-empty">{draft.items.length ? "沒有符合搜尋的項目" : "尚未加入巡查項目，巡查計劃模板至少需要 1 項"}</div>}</div>
+    {picker && <BatchPickerDrawer title="批量新增巡查項目" noun="巡查項目" description="搜尋及複選同類型巡查項目，一次加入巡查計劃模板。" filterLabel="項目類型" grouped rows={candidates.map((item) => ({ id: item.id, title: item.name, meta: `${item.code} · ${item.inputKind}`, group: item.category }))} onClose={() => setPicker(false)} onConfirm={add} />}
     {batchEdit && <BatchEditDrawer title="批量編輯巡查項目" count={selected.length} error={batchError} onClose={() => setBatchEdit(false)} onApply={applyBatchEdit}>
       <Field label="填寫要求"><Select ariaLabel="批量填寫要求" value={batchRequired} onChange={(value) => { setBatchRequired(value); setBatchError(""); }}><option value="">保持不變</option><option>必填</option><option>選填</option></Select></Field>
       <Field label="最少附件數" hint={`0–${ATTACHMENTS_MAX}；留空保持不變`}><input type="number" min={0} max={ATTACHMENTS_MAX} step={1} value={batchAttachments} onChange={(event) => { setBatchAttachments(event.target.value); setBatchError(""); }} placeholder="保持不變" /></Field>
@@ -166,7 +166,7 @@ function ObjectsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: 
     setBatchEdit(false);
   };
   return <>
-    <p className="tpl-hint">未指定對象時，模板適用「{draft.inspectionType || "所選巡查類型"}」下全部對象。{draft.locationCheck ? `對象有效距離留空即使用模板預設 ${defaultText} 米。` : "定位檢查已關閉，有效距離不適用。"}</p>
+    <p className="tpl-hint">未指定對象時，巡查計劃模板適用「{draft.inspectionType || "所選巡查類型"}」下全部對象。{draft.locationCheck ? `對象有效距離留空即使用巡查計劃模板預設 ${defaultText} 米。` : "定位檢查已關閉，有效距離不適用。"}</p>
     <section className="group-editor-section tpl-list-section">
       <header><h3>適用對象</h3><Button variant="primary" icon={<PlusOutlined />} disabled={!draft.inspectionType} onClick={() => setPicker(true)}>批量新增</Button></header>
       <div className="tpl-section-toolbar"><div className="group-user-search"><SearchOutlined /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜尋已加入的對象名稱、編號或地址" /></div><Select ariaLabel="篩選網格" value={grid} onChange={setGrid}><option value="">全部網格</option>{gridOptions.map((option) => <option key={option}>{option}</option>)}</Select></div>
@@ -181,9 +181,9 @@ function ObjectsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: 
         </tr>)}</tbody>
       </table>{!rows.length && <div className="tpl-empty">{draft.objects.length ? "沒有符合篩選的對象" : "未指定對象，適用類型下全部對象"}</div>}</div>
     </section>
-    {picker && <BatchPickerDrawer title="批量新增適用對象" noun="對象" description="搜尋及複選同類型對象，一次加入模板。" filterLabel="網格" rows={candidates.map((object) => ({ id: object.id, title: object.name, meta: `${object.code} · ${object.grid} · ${object.address}`, group: object.grid }))} onClose={() => setPicker(false)} onConfirm={add} />}
+    {picker && <BatchPickerDrawer title="批量新增適用對象" noun="對象" description="搜尋及複選同類型對象，一次加入巡查計劃模板。" filterLabel="網格" rows={candidates.map((object) => ({ id: object.id, title: object.name, meta: `${object.code} · ${object.grid} · ${object.address}`, group: object.grid }))} onClose={() => setPicker(false)} onConfirm={add} />}
     {batchEdit && <BatchEditDrawer title="批量編輯適用對象" count={selected.length} error={batchError} onClose={() => setBatchEdit(false)} onApply={applyBatchEdit}>
-      <Field label="有效距離（米）" hint={`${DISTANCE_MIN}–${DISTANCE_MAX} 米；留空即改用模板預設 ${defaultText} 米`}><input type="number" min={DISTANCE_MIN} max={DISTANCE_MAX} step={1} value={batchDistance} onChange={(event) => { setBatchDistance(event.target.value); setBatchError(""); }} placeholder={`預設 ${defaultText}`} /></Field>
+      <Field label="有效距離（米）" hint={`${DISTANCE_MIN}–${DISTANCE_MAX} 米；留空即改用巡查計劃模板預設 ${defaultText} 米`}><input type="number" min={DISTANCE_MIN} max={DISTANCE_MAX} step={1} value={batchDistance} onChange={(event) => { setBatchDistance(event.target.value); setBatchError(""); }} placeholder={`預設 ${defaultText}`} /></Field>
     </BatchEditDrawer>}
   </>;
 }
@@ -191,7 +191,7 @@ function ObjectsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: 
 function GroupsTab({ draft, onChange }: { draft: InspectionTemplate; onChange: (patch: Patch) => void }) {
   const toggle = (id: string) => onChange({ groups: inspectionGroupIds.filter((groupId) => groupId === id ? !draft.groups.includes(id) : draft.groups.includes(groupId)) });
   return <section className="group-editor-section"><header><h3>適用巡查群組</h3></header><div className="tpl-group-body">
-    <p className="tpl-hint">未選擇群組時，模板適用全部巡查群組。</p>
+    <p className="tpl-hint">未選擇群組時，巡查計劃模板適用全部巡查群組。</p>
     <div className="tpl-group-list">{inspectionGroups.map((group) => <label key={group.id}><input type="checkbox" checked={draft.groups.includes(group.id)} onChange={() => toggle(group.id)} /><span><strong>{group.name}</strong><small>{group.department} · 網格：{group.grids.join("、")}</small></span></label>)}</div>
   </div></section>;
 }
@@ -212,9 +212,9 @@ function BasicTab({ draft, onChange, onSubmit }: { draft: InspectionTemplate; on
   const toggleCheckPoint = (point: string) => onChange({ checkOn: checkPoints.filter((item) => item === point ? !draft.checkOn.includes(item) : draft.checkOn.includes(item)) });
   const submit = (event: FormEvent) => { event.preventDefault(); onSubmit(); };
   return <form className="tpl-basic-form" onSubmit={submit}>
-    <section className="group-editor-section"><header><h3>模板資料</h3></header><div className="group-editor-grid">
+    <section className="group-editor-section"><header><h3>巡查計劃模板資料</h3></header><div className="group-editor-grid">
       <Field label="編號" required hint="唯一，儲存後不可修改"><input value={draft.code} disabled={!isNew} onChange={(event) => onChange({ code: event.target.value })} placeholder="例如 TPL007" /></Field>
-      <Field label="模板名稱" required hint="1–50 字，同一巡查類型內唯一"><input value={draft.name} maxLength={50} onChange={(event) => onChange({ name: event.target.value })} placeholder="請輸入模板名稱" /></Field>
+      <Field label="巡查計劃模板名稱" required hint="1–50 字，同一巡查類型內唯一"><input value={draft.name} maxLength={50} onChange={(event) => onChange({ name: event.target.value })} placeholder="請輸入巡查計劃模板名稱" /></Field>
       <Field label="巡查類型" required hint={isNew ? "項目及對象只可選同類型記錄" : "建立後不可修改"}>{isNew ? <Select ariaLabel="巡查類型" value={draft.inspectionType} onChange={changeType}><option value="">請選擇巡查類型</option>{typeRecords.filter((type) => type.status === "生效").map((type) => <option key={type.id}>{type.name}</option>)}</Select> : <input value={draft.inspectionType} disabled />}</Field>
       <Field label="巡查要求"><textarea rows={4} value={draft.description} onChange={(event) => onChange({ description: event.target.value })} placeholder="說明巡查要求、作業步驟、輸入規範及附件要求" /></Field>
     </div></section>
@@ -224,10 +224,10 @@ function BasicTab({ draft, onChange, onSubmit }: { draft: InspectionTemplate; on
       <fieldset className="bip-field tpl-check-points" disabled={!draft.locationCheck}><legend>{draft.locationCheck && <b>*</b>}檢查時點</legend><div>{checkPoints.map((point) => <label key={point}><input type="checkbox" checked={draft.checkOn.includes(point)} onChange={() => toggleCheckPoint(point)} /><span>{point}</span></label>)}</div></fieldset>
       <p className="tpl-hint tpl-location-hint">巡查員須位於對象的有效距離範圍內，才可在所選時點開始填寫或提交巡查。</p>
     </div></section>
-    <section className="group-editor-section"><header><h3>模板狀態</h3></header><div className="group-editor-status"><div className="bip-field"><span>狀態</span><div className="switch-row"><label className="switch-control"><input type="checkbox" aria-label="模板生效" checked={draft.status === "生效"} onChange={(event) => changeStatus(event.target.checked)} /><span className="switch" /></label></div></div><div className="group-editor-count"><span>使用中的巡查計劃（共 {planRefs.length} 個）</span><strong>{openRefs.length}</strong></div></div></section>
+    <section className="group-editor-section"><header><h3>巡查計劃模板狀態</h3></header><div className="group-editor-status"><div className="bip-field"><span>狀態</span><div className="switch-row"><label className="switch-control"><input type="checkbox" aria-label="巡查計劃模板生效" checked={draft.status === "生效"} onChange={(event) => changeStatus(event.target.checked)} /><span className="switch" /></label></div></div><div className="group-editor-count"><span>使用中的巡查計劃（共 {planRefs.length} 個）</span><strong>{openRefs.length}</strong></div></div></section>
     <button type="submit" className="sr-only">儲存</button>
     <ConfirmDialog open={pendingType !== null} title="更改巡查類型？" message={`巡查項目及對象只可選同類型記錄，更改後將移除已加入的 ${draft.items.length} 個項目及 ${draft.objects.length} 個對象。`} danger confirmLabel="確認更改" onCancel={() => setPendingType(null)} onConfirm={() => { onChange({ inspectionType: pendingType ?? "", items: [], objects: [] }); setPendingType(null); }} />
-    <ConfirmDialog open={confirmDisable} title="停用巡查模板？" message={`此模板正被 ${openRefs.length} 個未開始或進行中的巡查計劃使用。停用後不可再用於新計劃及新巡查；這些計劃沿用建立時的模板快照，已生成的巡查不受影響。`} danger confirmLabel="確認停用" onCancel={() => setConfirmDisable(false)} onConfirm={() => { onChange({ status: "失效" }); setConfirmDisable(false); }} />
+    <ConfirmDialog open={confirmDisable} title="停用巡查計劃模板？" message={`此巡查計劃模板正被 ${openRefs.length} 個未開始或進行中的巡查計劃使用。停用後不可再用於新計劃及新巡查；這些計劃沿用建立時的巡查計劃模板快照，已生成的巡查不受影響。`} danger confirmLabel="確認停用" onCancel={() => setConfirmDisable(false)} onConfirm={() => { onChange({ status: "失效" }); setConfirmDisable(false); }} />
   </form>;
 }
 
@@ -236,7 +236,7 @@ function TemplateEditor({ draft, tab, errors, onTab, onChange, onSubmit }: { dra
   useEffect(() => { if (errors.length) errorRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [errors]);
   const counts: Partial<Record<TemplateTab, number>> = { items: draft.items.length, objects: draft.objects.length, groups: draft.groups.length };
   return <div className="tpl-editor">
-    <nav className="bip-editor-tabs" role="tablist" aria-label="巡查模板設定">{editorTabs.map((item) => <button type="button" role="tab" key={item.key} aria-selected={tab === item.key} className={tab === item.key ? "active" : ""} onClick={() => onTab(item.key)}>{item.label}{counts[item.key] !== undefined && <span>{counts[item.key]}</span>}</button>)}</nav>
+    <nav className="bip-editor-tabs" role="tablist" aria-label="巡查計劃模板設定">{editorTabs.map((item) => <button type="button" role="tab" key={item.key} aria-selected={tab === item.key} className={tab === item.key ? "active" : ""} onClick={() => onTab(item.key)}>{item.label}{counts[item.key] !== undefined && <span>{counts[item.key]}</span>}</button>)}</nav>
     <div className="tpl-tab-content" role="tabpanel">
       {errors.length > 0 && <div ref={errorRef} className="tpl-editor-error" role="alert">{errors.map((error) => error.message).join(" ")}</div>}
       {tab === "basic" && <BasicTab draft={draft} onChange={onChange} onSubmit={onSubmit} />}
@@ -267,7 +267,7 @@ export function InspectionTemplatesPage() {
     const saved: InspectionTemplate = { ...template, id: template.id || `TPL-${Date.now()}`, updatedBy: "陳家朗", updatedAt: nowText() };
     saveInspectionTemplates(templates.some((item) => item.id === saved.id) ? templates.map((item) => item.id === saved.id ? saved : item) : [saved, ...templates]);
     setDraft(null);
-    showToast(template.id ? "巡查模板已更新" : "巡查模板已建立");
+    showToast(template.id ? "巡查計劃模板已更新" : "巡查計劃模板已建立");
   };
   const columns: Column<InspectionTemplate>[] = ([
     { key: "code", title: "編號", width: 110 },
@@ -284,7 +284,7 @@ export function InspectionTemplatesPage() {
     { key: "updatedAt", title: "更新時間", width: 160 },
   ] satisfies Column<InspectionTemplate>[]).map((column) => ({ ...column, sortable: true }));
   return <div className="page-content tpl-page">
-    <PageHeader title="巡查模板" actions={<><Button icon={<CloudUploadOutlined />}>匯入</Button><Button icon={<ExportOutlined />}>匯出</Button><Button variant="primary" icon={<PlusOutlined />} onClick={() => open(newTemplate())}>新增模板</Button></>} />
+    <PageHeader title="巡查計劃模板" actions={<><Button icon={<CloudUploadOutlined />}>匯入</Button><Button icon={<ExportOutlined />}>匯出</Button><Button variant="primary" icon={<PlusOutlined />} onClick={() => open(newTemplate())}>新增巡查計劃模板</Button></>} />
     <section className="panel list-panel tpl-list-panel">
       <div className="filter-bar tpl-filter-bar">
         <label className="filter-field"><span>編號</span><input aria-label="編號" value={filters.code} onChange={(event) => filter("code", event.target.value)} placeholder="請輸入編號" /></label>
@@ -297,7 +297,7 @@ export function InspectionTemplatesPage() {
       <DenseTable rows={rows} columns={columns} stickyActions actionTitle="操作" page={Math.min(page, Math.max(1, Math.ceil(rows.length / pageSize)))} pageSize={pageSize} onSort={() => setPage(1)} renderActions={(template) => <button className="table-action-button" aria-label={`編輯 ${template.name}`} onClick={() => open(template)}><EditOutlined />編輯</button>} />
       <Pagination total={rows.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} />
     </section>
-    <FormDrawer open={!!draft} title={draft?.id ? "編輯巡查模板" : "新增巡查模板"} subtitle={draft?.id ? draft.code : undefined} className="tpl-editor-drawer" onClose={() => setDraft(null)} onSubmit={save}>
+    <FormDrawer open={!!draft} title={draft?.id ? "編輯巡查計劃模板" : "新增巡查計劃模板"} subtitle={draft?.id ? draft.code : undefined} className="tpl-editor-drawer" onClose={() => setDraft(null)} onSubmit={save}>
       {draft && <TemplateEditor draft={draft} tab={tab} errors={errors} onTab={setTab} onChange={change} onSubmit={save} />}
     </FormDrawer>
   </div>;

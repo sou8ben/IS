@@ -61,12 +61,12 @@ export interface Plan {
   department?: string;
   objectIds?: string[];
   note?: string;
-  /** The 巡查模板 the plan uses (`template` holds its name as at creation). */
+  /** The 巡查計劃模板 the plan uses (`template` holds its name as at creation). */
   templateId?: string;
-  /** Retired: the plan template of plans created before 巡查模板 drove plans. */
+  /** Retired: the plan template of plans created before 巡查計劃模板 drove plans. */
   planTemplateId?: string;
   groupId?: string;
-  /** 巡查模板 and chosen objects as at creation, with the template items; later template edits never change the plan. */
+  /** 巡查計劃模板 and chosen objects as at creation, with the template items; later template edits never change the plan. */
   snapshot?: PlanSnapshot<TemplateItem>;
   /** Inspections generated or added in the back office; the App materialises the non-補入 entries. */
   inspections?: PlannedInspection[];

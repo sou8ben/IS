@@ -93,7 +93,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const missing = shared.plans.flatMap((plan) => (plan.inspections ?? []).filter((entry) => entry.source !== "補入" && !stateRef.current.inspections.some((item) => item.id === entry.id)).map((entry) => ({ planId: plan.id, entry })));
     if (!missing.length) return;
-    // inspections of the plan's own 巡查模板 take the template items from the plan snapshot, so later template edits do not change them
+    // inspections of the plan's own 巡查計劃模板 take the template items from the plan snapshot, so later template edits do not change them
     const snapshotItems = (planId: string, templateId: string) => { const snapshot = shared.plans.find((plan) => plan.id === planId)?.snapshot; return snapshot?.items && snapshot.templateId === templateId ? structuredClone(snapshot.items) : undefined; };
     const added: Inspection[] = missing.map(({ planId, entry }) => ({ id: entry.id, planId, objectId: entry.objectId, templateId: entry.templateId, seq: entry.seq, status: "未完成", results: {}, items: snapshotItems(planId, entry.templateId) }));
     const inspections = [...stateRef.current.inspections, ...added];
