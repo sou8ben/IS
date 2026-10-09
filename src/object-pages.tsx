@@ -103,7 +103,7 @@ export function ObjectCreatePage() {
 }
 
 // ---- 詳情 ----
-type Tab = "基本資料" | "關聯巡查計劃模板" | "最近巡查記錄" | "工作負責群組";
+type Tab = "基本資料" | "關聯巡查模板" | "最近巡查記錄" | "工作負責群組";
 
 export function ObjectDetailPage() {
   const { id = "" } = useParams(); const navigate = useNavigate(); const { objects } = useDemo();
@@ -131,13 +131,13 @@ function ObjectDetail({ object }: { object: ManagedObject }) {
     update({ workGroups: groups }); setGroupErrors([]); showToast("工作負責群組已更新，之後新增的工作會按此分派");
   };
   const templateColumns: Column<(typeof related)[number]>[] = [
-    { key: "code", title: "巡查計劃模板編號", width: 150, render: (row) => row.template.code }, { key: "name", title: "巡查計劃模板名稱", width: 220, render: (row) => row.template.name },
+    { key: "code", title: "模板編號", width: 110, render: (row) => row.template.code }, { key: "name", title: "模板名稱", width: 220, render: (row) => row.template.name },
     { key: "scope", title: "適用方式", width: 130, render: (row) => <StatusTag tone={row.scope === "指定對象" ? "info" : "neutral"}>{row.scope}</StatusTag> },
     { key: "location", title: "有效距離（米）", width: 130, render: (row) => row.template.locationCheck ? row.template.objects.find((entry) => entry.objectId === object.id)?.distance ?? row.template.validDistance ?? "—" : "不需要定位" },
     { key: "status", title: "狀態", width: 90, render: (row) => <StatusTag tone={row.template.status === "生效" ? "success" : "neutral"}>{row.template.status}</StatusTag> },
   ];
   const recentColumns: Column<InspectionRecord>[] = [
-    { key: "id", title: "巡查編號", width: 160, render: (record) => <Link to={`/inspections/${record.id}`}>{record.id}</Link> }, { key: "template", title: "巡查計劃模板", width: 190, render: (record) => record.snapshot.name },
+    { key: "id", title: "巡查編號", width: 160, render: (record) => <Link to={`/inspections/${record.id}`}>{record.id}</Link> }, { key: "template", title: "巡查模板", width: 190, render: (record) => record.snapshot.name },
     { key: "status", title: "狀態", width: 90, render: (record) => <StatusTag>{record.status}</StatusTag> },
     { key: "result", title: "結果", width: 90, render: (record) => { const result = resultOf(record); return <StatusTag tone={result === "異常" ? "danger" : result === "正常" ? "success" : "neutral"}>{result}</StatusTag>; } },
     { key: "inspector", title: "巡查人員", width: 100, render: (record) => record.inspector ?? "—" }, { key: "submittedAt", title: "提交時間", width: 150, render: (record) => record.submittedAt ?? "—" },
@@ -155,7 +155,7 @@ function ObjectDetail({ object }: { object: ManagedObject }) {
     </div>
     <section className="panel plan-map-panel obj-map-panel"><PlanMap polygons={polygons} markers={markers} selected={selected} onSelect={setSelected} fitPolygon={object.geojson && object.geojson.type !== "Point" ? "shape" : "none"} fitKey={object.id}
       legend={<><LegendItem tone="object">對象位置</LegendItem>{object.geojson && <LegendItem tone="route">地圖範圍</LegendItem>}<LegendItem tone="ghost">網格（高亮為所屬網格）</LegendItem></>} /></section>
-    <section className="panel tab-panel obj-tab-panel"><nav>{(["基本資料", "關聯巡查計劃模板", "最近巡查記錄", "工作負責群組"] as Tab[]).map((name) => <button key={name} className={tab === name ? "active" : ""} onClick={() => setTab(name)}>{name}<span>{name === "關聯巡查計劃模板" ? related.length : name === "最近巡查記錄" ? recent.length : name === "工作負責群組" ? object.workGroups.length : object.attachments.length}</span></button>)}</nav>
+    <section className="panel tab-panel obj-tab-panel"><nav>{(["基本資料", "關聯巡查模板", "最近巡查記錄", "工作負責群組"] as Tab[]).map((name) => <button key={name} className={tab === name ? "active" : ""} onClick={() => setTab(name)}>{name}<span>{name === "關聯巡查模板" ? related.length : name === "最近巡查記錄" ? recent.length : name === "工作負責群組" ? object.workGroups.length : object.attachments.length}</span></button>)}</nav>
       <div className="obj-tab-body">
         {tab === "基本資料" && <div className="evt-info">
           <dl className="description-grid">
@@ -165,7 +165,7 @@ function ObjectDetail({ object }: { object: ManagedObject }) {
           </dl>
           <h4>附件</h4>{object.attachments.length ? <AttachmentField files={object.attachments} min={0} usedChars={0} onChange={() => undefined} disabled /> : <p className="evt-empty">沒有附件</p>}
         </div>}
-        {tab === "關聯巡查計劃模板" && <><p className="plan-hint obj-tab-hint">列出同一巡查類型下，指定了此對象或沒有指定任何對象（適用類型下全部對象）的巡查計劃模板。<Link to="/config/templates">前往巡查計劃模板</Link></p><DenseTable rows={related} columns={templateColumns} emptyText="沒有適用於此對象的巡查計劃模板" /></>}
+        {tab === "關聯巡查模板" && <><p className="plan-hint obj-tab-hint">列出同一巡查類型下，指定了此對象或沒有指定任何對象（適用類型下全部對象）的巡查模板。<Link to="/config/templates">前往巡查模板</Link></p><DenseTable rows={related} columns={templateColumns} emptyText="沒有適用於此對象的巡查模板" /></>}
         {tab === "最近巡查記錄" && <DenseTable rows={recent} columns={recentColumns} emptyText="此對象尚未有巡查記錄" />}
         {tab === "工作負責群組" && <div className="obj-groups">
           <p className="plan-hint">按群組管理的分類指定此對象的負責群組。執行群組只可設一個：此對象的所有新工作都會分派給它，優先於派工規則及工作類型默認群組；未設定時照常按規則分派。<Link to="/auth/groups">前往群組管理</Link></p>
@@ -176,7 +176,7 @@ function ObjectDetail({ object }: { object: ManagedObject }) {
       </div>
     </section>
     {editing && <EditObjectDrawer object={object} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); showToast("對象已更新"); }} />}
-    <ConfirmDialog open={confirmOff} title="停用對象？" message={`停用後，此對象不再出現在巡查計劃模板及計劃的可選清單；${explicitTemplates ? `目前有 ${explicitTemplates} 個巡查計劃模板指定了此對象，` : ""}已有的巡查、事件及工作記錄保留不變。`} danger confirmLabel="確認停用" onCancel={() => setConfirmOff(false)} onConfirm={() => { update({ status: "停用" }); setConfirmOff(false); showToast("對象已停用"); }} />
+    <ConfirmDialog open={confirmOff} title="停用對象？" message={`停用後，此對象不再出現在巡查模板及計劃的可選清單；${explicitTemplates ? `目前有 ${explicitTemplates} 個巡查模板指定了此對象，` : ""}已有的巡查、事件及工作記錄保留不變。`} danger confirmLabel="確認停用" onCancel={() => setConfirmOff(false)} onConfirm={() => { update({ status: "停用" }); setConfirmOff(false); showToast("對象已停用"); }} />
   </div>;
 }
 

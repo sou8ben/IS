@@ -9,7 +9,7 @@ import { activeAppTemplates, appTemplate, itemsForInspection, templateAppliesTo 
 import { auxEntriesFor, historyFromApp } from "../../aux-data";
 import { getManagedObjects, getObject } from "../../object-data";
 import { objectIndex } from "../../object-data";
-import { groupTemplateItems, isAbnormal, nowText, shortTime, validateInspection, visiblePlans, workInspection, workPoint, type SubmitError } from "../rules";
+import { groupTemplateItems, isAbnormal, isMergeable, nowText, planStats, planTag, shortTime, validateInspection, visiblePlans, workInspection, workPoint, type PlanStats, type SubmitError } from "../rules";
 import { useApp } from "../store";
 import type { Inspection, ItemResult, TemplateItem } from "../types";
 
@@ -18,9 +18,9 @@ const itemPhoto: Record<string, string> = { seat: photoAssets.seat, bin: photoAs
 export const inspectionAbnormal = (inspection: Inspection) => { return itemsForInspection(inspection).some((item) => isAbnormal(item, inspection.results[item.key]?.value)); };
 const inspectionTone = (inspection: Inspection): MapMarker["tone"] => inspection.status === "已完成" ? (inspectionAbnormal(inspection) ? "issue" : "done") : "todo";
 
-function PlanCard({ plan, works, selecting, checked, onToggle, onOpen, onLongPress }: { plan: Plan; works: number; selecting: boolean; checked: boolean; onToggle: () => void; onOpen: () => void; onLongPress: () => void }) {
+function PlanCard({ plan, stats, selecting, checked, onToggle, onOpen, onLongPress }: { plan: Plan; stats: PlanStats; selecting: boolean; checked: boolean; onToggle: () => void; onOpen: () => void; onLongPress: () => void }) {
   const timer = useRef<number>(0);
-  const selectable = plan.status === "未開始" || plan.status === "已中止";
+  const selectable = isMergeable(plan);
   const press = () => { timer.current = window.setTimeout(onLongPress, 520); };
   const release = () => window.clearTimeout(timer.current);
   return <div className={`m-plan-card ${checked ? "checked" : ""} ${selecting && !selectable ? "disabled" : ""}`} onPointerDown={press} onPointerUp={release} onPointerLeave={release} onContextMenu={(event) => { event.preventDefault(); onLongPress(); }}
@@ -29,14 +29,14 @@ function PlanCard({ plan, works, selecting, checked, onToggle, onOpen, onLongPre
     <div className="m-plan-main">
       <div className="m-plan-title"><strong>{plan.name}</strong><StatusTag>{plan.status}</StatusTag></div>
       <span className="m-plan-meta"><ClockCircleOutline /> {shortTime(plan.startAt)}–{shortTime(plan.endAt)} · {plan.group}</span>
-      <div className="m-plan-progress"><Progress value={plan.progress} total={plan.total} tone={plan.status === "已完成" ? "success" : "primary"} /><span>已執行 {plan.progress}/{plan.total}</span></div>
-      <div className="m-plan-foot"><span>{plan.id}</span><span>關聯巡查 {plan.total}</span><span>關聯工作 {works}</span>{plan.executor && plan.status === "進行中" && <span className="exec">執行人 {plan.executor}</span>}</div>
+      <div className="m-plan-progress"><Progress value={stats.done} total={stats.planned} tone={plan.status === "已完成" ? "success" : "primary"} /><span>已執行 {stats.done} / 需巡查 {stats.planned}</span></div>
+      <div className="m-plan-foot"><span>{plan.id}</span><span>關聯巡查 {stats.linked}{stats.onSite ? `（現場新增 ${stats.onSite}）` : ""}</span><span>關聯工作 {stats.works}</span><span>關聯事件 {stats.events}</span>{plan.executor && plan.status === "進行中" && <span className="exec">執行人 {plan.executor}</span>}</div>
     </div>
   </div>;
 }
 
 export function PlanListPage() {
-  const { shared, persona, startPlans } = useApp(); const navigate = useNavigate();
+  const { state, shared, persona } = useApp(); const navigate = useNavigate();
   const [group, setGroup] = useState("全部"); const [date, setDate] = useState("今日"); const [status, setStatus] = useState("全部");
   const [selecting, setSelecting] = useState(false); const [selected, setSelected] = useState<string[]>([]);
   const dropdown = useRef<DropdownRef>(null);
@@ -44,23 +44,19 @@ export function PlanListPage() {
   const rows = mine.filter((plan) => (group === "全部" || plan.group === group) && (date === "全部" || (date === "今日" ? plan.startAt.startsWith(TODAY) : plan.startAt >= "2026-09-27")) && (status === "全部" || plan.status === status));
   const hasActive = shared.plans.some((plan) => plan.status === "進行中" && plan.executor === persona.name);
   const inspectGroups = persona.groups.filter((item) => item.kind === "巡查").map((item) => item.name);
-  const enterSelect = () => { if (hasActive) { Toast.show({ content: "已有計劃進行中，不可合併" }); return; } setSelecting(true); };
-  const merge = () => {
-    const error = startPlans(selected);
-    if (error) { Dialog.alert({ title: "未能開始作業", content: error, confirmText: "知道了" }); return; }
-    Toast.show({ icon: "success", content: `已合併並開始 ${selected.length} 個計劃` });
-    navigate(`/plans/merge?ids=${selected.join(",")}`);
-  };
+  // 合併只是介面上的顯示：進入合併版詳情時不加鎖、不改數據，開始作業在詳情內進行
+  const enterSelect = () => { if (hasActive) { Toast.show({ content: "已有計劃進行中，中止或完成後才可合併顯示" }); return false; } setSelecting(true); return true; };
+  const merge = () => navigate(`/plans/merge?ids=${selected.join(",")}`);
   return <Page title="巡查計劃" back={false} right={<button className="m-nav-link" onClick={() => navigate("/inspections")}><UnorderedListOutline /> 巡查記錄</button>}
-    footer={selecting ? <div className="m-footer-bar"><span>已選 {selected.length} 個計劃</span><Button onClick={() => { setSelecting(false); setSelected([]); }}>取消</Button><Button color="primary" disabled={selected.length < 2} onClick={merge}>合併開始作業</Button></div> : undefined}>
+    footer={selecting ? <div className="m-footer-bar"><span>已選 {selected.length} 個計劃</span><Button onClick={() => { setSelecting(false); setSelected([]); }}>取消</Button><Button color="primary" disabled={selected.length < 2} onClick={merge}>合併顯示</Button></div> : undefined}>
     <Dropdown className="m-dropdown" ref={dropdown}>
       <Dropdown.Item key="group" title={group === "全部" ? "全部所屬群組" : group}><FilterOptions value={group} options={[["全部", "全部所屬群組"], ...inspectGroups.map((name) => [name, name] as [string, string])]} onChange={(value) => { setGroup(value); dropdown.current?.close(); }} /></Dropdown.Item>
       <Dropdown.Item key="date" title={date}><FilterOptions value={date} options={[["今日", "今日"], ["本週", "本週"], ["全部", "全部日期"]]} onChange={(value) => { setDate(value); dropdown.current?.close(); }} /></Dropdown.Item>
       <Dropdown.Item key="status" title={status === "全部" ? "全部狀態" : status}><FilterOptions value={status} options={[["全部", "全部狀態"], ...["未開始", "進行中", "已中止", "已完成"].map((name) => [name, name] as [string, string])]} onChange={(value) => { setStatus(value); dropdown.current?.close(); }} /></Dropdown.Item>
     </Dropdown>
-    <div className="m-list-hint">{selecting ? "選擇未開始或已中止的計劃，合併後一併加鎖" : "長按計劃卡片可多選合併作業"}<span>共 {rows.length} 個</span></div>
-    {!inspectGroups.length ? <Empty title="你不屬任何巡查群組" text="巡查計劃只向指派的巡查群組成員顯示" /> : rows.length ? rows.map((plan) => <PlanCard key={plan.id} plan={plan} works={shared.works.filter((work) => work.planId === plan.id).length} selecting={selecting} checked={selected.includes(plan.id)}
-      onToggle={() => setSelected(selected.includes(plan.id) ? selected.filter((id) => id !== plan.id) : [...selected, plan.id])} onOpen={() => navigate(`/plans/${plan.id}`)} onLongPress={() => { if (!selecting) { enterSelect(); if (!hasActive && (plan.status === "未開始" || plan.status === "已中止")) setSelected([plan.id]); } }} />)
+    <div className="m-list-hint">{hasActive ? "進行中的計劃中止或完成後，才可合併顯示" : selecting ? "選擇至少 2 個未開始或已中止的計劃，在合併詳情內開始作業" : "長按計劃卡片可多選合併顯示"}<span>共 {rows.length} 個</span></div>
+    {!inspectGroups.length ? <Empty title="你不屬任何巡查群組" text="巡查計劃只向指派的巡查群組成員顯示" /> : rows.length ? rows.map((plan) => <PlanCard key={plan.id} plan={plan} stats={planStats(plan.id, state.inspections, shared.works, shared.events)} selecting={selecting} checked={selected.includes(plan.id)}
+      onToggle={() => setSelected(selected.includes(plan.id) ? selected.filter((id) => id !== plan.id) : [...selected, plan.id])} onOpen={() => navigate(`/plans/${plan.id}`)} onLongPress={() => { if (!selecting && enterSelect() && isMergeable(plan)) setSelected([plan.id]); }} />)
       : <Empty title="沒有符合條件的計劃" text="請調整篩選條件" />}
   </Page>;
 }
@@ -83,15 +79,25 @@ export function PlanWorkPage() {
   const otherExecutor = plans.find((item) => item.status === "進行中" && item.executor !== persona.name)?.executor;
   const works = shared.works.filter((work) => work.planId && ids.includes(work.planId));
   const events = shared.events.filter((event) => event.planId && ids.includes(event.planId));
+  // 合併顯示只是介面上的合併：各計劃的巡查、事件、工作照舊分開讀取，只用字母及顏色分辨
+  const merged = plans.length > 1;
+  const tagged = plans.map((item, index) => ({ plan: item, tag: planTag(index), stats: planStats(item.id, state.inspections, shared.works, shared.events) }));
+  const tagOf = (planId?: string) => tagged.find((entry) => entry.plan.id === planId)?.tag ?? tagged[0].tag;
+  const plannedTotal = tagged.reduce((sum, entry) => sum + entry.stats.planned, 0); const plannedDone = tagged.reduce((sum, entry) => sum + entry.stats.done, 0); const onSiteTotal = tagged.reduce((sum, entry) => sum + entry.stats.onSite, 0);
+  const busyElsewhere = shared.plans.some((item) => item.status === "進行中" && item.executor === persona.name && !ids.includes(item.id));
   const markers: MapMarker[] = [
-    ...inspections.map((item) => { const object = objectIndex[item.objectId]; return { id: item.id, x: object.x, y: object.y, tone: inspectionTone(item), index: item.seq, title: object.name, subtitle: `${item.status}${item.submittedAt ? ` · ${shortTime(item.submittedAt)}` : ""}`, openLabel: "巡查表", onOpen: () => navigate(`/inspections/${item.id}`) }; }),
+    ...inspections.map((item) => { const object = objectIndex[item.objectId]; return { id: item.id, x: object.x, y: object.y, tone: inspectionTone(item), index: merged ? `${tagOf(item.planId).letter}${item.seq}` : item.seq, title: object.name, subtitle: `${item.status}${item.submittedAt ? ` · ${shortTime(item.submittedAt)}` : ""}`, openLabel: "巡查表", onOpen: () => navigate(`/inspections/${item.id}`) }; }),
     ...works.map((work) => ({ id: work.id, x: workPoint(work).x + 9, y: workPoint(work).y - 9, tone: "work" as const, index: "工", title: work.title, subtitle: `${work.id} · ${work.status}`, onOpen: () => navigate(`/works/${work.id}`) })),
     ...events.map((event) => ({ id: event.id, x: (event.x ?? eventMeta[event.id]?.x ?? 624) - 9, y: (event.y ?? eventMeta[event.id]?.y ?? 92) - 9, tone: "event" as const, index: "事", title: event.description, subtitle: event.id, onOpen: () => navigate(`/events/${event.id}`) })),
   ];
+  // 合併顯示只供未開始或已中止的計劃；已有計劃進行中，或其中有計劃已不可合併時，不再提供合併顯示
+  if (merged && !mineActive && !otherExecutor && (busyElsewhere || !plans.every(isMergeable))) return <Page title="合併顯示" backTo="/plans" footer={<div className="m-footer-bar"><Button block onClick={() => navigate("/plans")}>返回列表</Button></div>}>
+    <Empty title={busyElsewhere ? "已有計劃進行中，不可合併顯示" : "部分計劃已不可合併"} text={busyElsewhere ? "請先中止或完成進行中的計劃" : "只有未開始或已中止的計劃可合併顯示，請返回列表重新選擇"} />
+  </Page>;
   const start = () => {
     const error = startPlans(ids);
     if (error) Dialog.alert({ title: "未能開始作業", content: error, confirmText: "知道了" });
-    else Toast.show({ icon: "success", content: "已取得作業鎖，開始作業" });
+    else Toast.show({ icon: "success", content: merged ? `已合併並取得作業鎖，開始 ${ids.length} 個計劃的作業` : "已取得作業鎖，開始作業" });
   };
   const addActions = [
     { key: "inspection", text: "新增巡查", onClick: () => navigate(`/inspections/new?plan=${plan.id}`) },
@@ -108,20 +114,22 @@ export function PlanWorkPage() {
     ? <div className="m-footer-bar"><Button onClick={() => setDialog("stop")}>中止作業</Button><Button color="primary" onClick={() => setDialog("finish")}>完成作業</Button></div>
     : otherExecutor ? <div className="m-footer-note"><ExclamationCircleFill /> {otherExecutor}正在執行此計劃，你只可查看</div>
     : plan.status === "已完成" ? <div className="m-footer-bar"><Button block onClick={() => navigate(`/inspections/new?plan=${plan.id}&supplement=1`)}>補錄巡查</Button></div>
-    : <div className="m-footer-bar"><Button block color="primary" onClick={start}>{plans.length > 1 ? "合併開始作業" : "開始作業"}</Button></div>;
-  return <Page title={plans.length > 1 ? `合併作業（${plans.length}）` : plan.name} backTo="/plans" right={<button className="m-nav-icon" aria-label="更多" onClick={() => setMore(true)}><MoreOutline /></button>} footer={footer} bodyClassName="m-work-body">
-    <div className="m-plan-strip">
-      <div><StatusTag>{plans.length > 1 ? "合併" : plan.status}</StatusTag><span>{plans.length > 1 ? plans.map((item) => item.name).join("、") : `${shortTime(plan.startAt)}–${shortTime(plan.endAt)} · ${plan.group}`}</span></div>
-      <div className="m-plan-strip-progress"><strong>{done}<small>/{inspections.length}</small></strong><span>已巡查</span></div>
+    : merged ? <div className="m-footer-bar"><Button onClick={() => navigate("/plans")}>返回</Button><Button color="primary" onClick={start}>合併開始作業</Button></div>
+    : <div className="m-footer-bar"><Button block color="primary" onClick={start}>開始作業</Button></div>;
+  return <Page title={merged ? `${mineActive ? "合併作業" : "合併顯示"}（${plans.length}）` : plan.name} backTo="/plans" right={<button className="m-nav-icon" aria-label="更多" onClick={() => setMore(true)}><MoreOutline /></button>} footer={footer} bodyClassName="m-work-body">
+    <div className={`m-plan-strip ${merged ? "merged" : ""}`}>
+      {merged ? <div className="m-merge-chips">{tagged.map(({ plan: item, tag, stats }) => <span key={item.id} className="m-merge-chip"><i style={{ background: tag.color }}>{tag.letter}</i><b>{item.name}</b><em>{stats.done}/{stats.planned}</em></span>)}</div>
+        : <div><StatusTag>{plan.status}</StatusTag><span>{`${shortTime(plan.startAt)}–${shortTime(plan.endAt)} · ${plan.group}`}</span></div>}
+      <div className="m-plan-strip-progress"><strong>{plannedDone}<small>/{plannedTotal}</small></strong><span>已巡查{onSiteTotal ? ` · 現場新增 ${onSiteTotal}` : ""}</span></div>
     </div>
     <div className={`m-split ${expanded ? "list-expanded" : ""}`}>
-      <MapView key={ids.join()} markers={markers} routes={ids.map((planId) => planRoutes[planId] ?? plans.find((item) => item.id === planId)?.snapshot?.route ?? [])} track={mineActive && ids.includes("PL-20260929-0003") ? myTrack : undefined} className="m-split-map"
+      <MapView key={ids.join()} markers={markers} routes={ids.map((planId) => planRoutes[planId] ?? plans.find((item) => item.id === planId)?.snapshot?.route ?? [])} routeColors={merged ? tagged.map((entry) => entry.tag.color) : undefined} track={mineActive && ids.includes("PL-20260929-0003") ? myTrack : undefined} className="m-split-map"
         legend={<><LegendDot tone="todo">未巡查</LegendDot><LegendDot tone="done">已完成</LegendDot><LegendDot tone="issue">有異常</LegendDot><LegendDot tone="work">工作</LegendDot></>} />
       <div className="m-split-list">
         <button className="m-sheet-handle" aria-label={expanded ? "收起清單" : "展開清單"} onClick={() => setExpanded(!expanded)}><i /></button>
         <div className="m-sheet-head"><strong>路線對象 {inspections.length}</strong><div className="m-seg small"><button className={order === "route" ? "active" : ""} onClick={() => setOrder("route")}>路線順序</button><button className={order === "distance" ? "active" : ""} onClick={() => setOrder("distance")}>距離排序</button></div></div>
-        {plans.length > 1 && order === "route" ? plans.map((item) => <div key={item.id}><GroupTitle>{item.name}</GroupTitle>{sorted.filter((row) => row.planId === item.id).map((row) => <InspectionRow key={row.id} inspection={row} />)}</div>)
-          : sorted.map((row) => <InspectionRow key={row.id} inspection={row} />)}
+        {merged && order === "route" ? tagged.map(({ plan: item, tag, stats }) => <div key={item.id}><div className="m-merge-group"><i style={{ background: tag.color }}>{tag.letter}</i><strong>{item.name}</strong><span>已巡查 {stats.done}/{stats.planned}</span></div>{sorted.filter((row) => row.planId === item.id).map((row) => <InspectionRow key={row.id} inspection={row} tag={tag} />)}</div>)
+          : sorted.map((row) => <InspectionRow key={row.id} inspection={row} tag={merged ? tagOf(row.planId) : undefined} />)}
         {!inspections.length && <Empty title="此計劃只安排路線" text="到場後可按「新增巡查」現場建立，並自動關聯計劃" />}
       </div>
     </div>
@@ -139,13 +147,13 @@ function PlanOpsPopup({ visible, planIds, onClose }: { visible: boolean; planIds
   return <ReasonDialog visible={visible} title="作業記錄" hideInput confirmText="關閉" hideCancel onCancel={onClose} onConfirm={onClose} description={<div className="m-ops">{rows.length ? rows.map((op, index) => <div key={index}><StatusTag tone={op.action === "搶鎖失敗" ? "danger" : op.action === "開始作業" ? "info" : "neutral"}>{op.action}</StatusTag><span>{op.operator} · {shortTime(op.time)}{op.reason ? ` · ${op.reason}` : ""}</span></div>) : <span>尚無作業記錄</span>}</div>} />;
 }
 
-function InspectionRow({ inspection }: { inspection: Inspection }) {
+function InspectionRow({ inspection, tag }: { inspection: Inspection; tag?: { letter: string; color: string } }) {
   const navigate = useNavigate(); const { state, shared } = useApp();
   const object = objectIndex[inspection.objectId]; const template = appTemplate(inspection.templateId);
   const abnormal = inspection.status === "已完成" && inspectionAbnormal(inspection);
   const works = shared.works.filter((work) => workInspection(work).inspectionId === inspection.id || state.workLinks.some((link) => link.workId === work.id && link.inspectionId === inspection.id)).length;
-  return <button className="m-insp-row" onClick={() => navigate(`/inspections/${inspection.id}`)}>
-    <span className={`m-insp-index tone-${inspectionTone(inspection)}`}>{inspection.status === "已完成" && !abnormal ? <CheckOutline /> : inspection.seq}</span>
+  return <button className="m-insp-row" style={tag ? { boxShadow: `inset 3px 0 0 ${tag.color}` } : undefined} onClick={() => navigate(`/inspections/${inspection.id}`)}>
+    <span className={`m-insp-index tone-${inspectionTone(inspection)} ${tag ? "tagged" : ""}`}>{inspection.status === "已完成" && !abnormal ? <CheckOutline /> : tag ? `${tag.letter}${inspection.seq}` : inspection.seq}</span>
     <div><strong>{object?.name}</strong><span>{template?.name} · 距離 {object?.distance ?? "—"} 米{works ? ` · 工作 ${works}` : ""}</span></div>
     <div className="m-insp-status">{abnormal ? <StatusTag>異常</StatusTag> : <StatusTag>{inspection.status}</StatusTag>}{inspection.pendingSync && <StatusTag>待同步</StatusTag>}<small>{inspection.submittedAt ? shortTime(inspection.submittedAt) : ""}</small></div>
   </button>;
@@ -172,7 +180,7 @@ export function InspectionFormPage() {
   const auxHistory = useMemo(() => historyFromApp(state.inspections, shared.inspectionRecords), [state.inspections, shared.inspectionRecords]);
   // Item fields come live from 巡查項目 until submission; a submitted inspection keeps the items it was submitted with.
   const base = inspection ? appTemplate(inspection.templateId) : undefined;
-  // the object's effective distance from the 巡查計劃模板 (per-object override, else the template default)
+  // the object's effective distance from the 巡查模板 (per-object override, else the template default)
   const template = base && inspection ? { ...base, validDistance: base.objectDistances?.[inspection.objectId] ?? base.validDistance, items: itemsForInspection(inspection) } : undefined;
   const object = inspection ? objectIndex[inspection.objectId] : undefined;
   const plan = shared.plans.find((item) => item.id === inspection?.planId);
@@ -268,7 +276,7 @@ export function InspectionCreatePage() {
   const [templateId, setTemplateId] = useState(activeAppTemplates()[0].id);
   const [objectId, setObjectId] = useState<string>();
   const template = appTemplate(templateId)!;
-  // the nearest active objects the 巡查計劃模板 applies to (same inspection type, and listed by the template when it lists objects)
+  // the nearest active objects the 巡查模板 applies to (same inspection type, and listed by the template when it lists objects)
   const objects = useMemo(() => getManagedObjects().filter((managed) => managed.status === "啟用" && templateAppliesTo(template, managed)).flatMap((managed) => getObject(managed.id) ?? []).sort((a, b) => a.distance - b.distance).slice(0, 30), [template]);
   const create = () => {
     if (!objectId) { Toast.show({ content: "請選擇巡查對象" }); return; }
@@ -278,7 +286,7 @@ export function InspectionCreatePage() {
   };
   return <Page title={supplement ? "補錄巡查" : "新增巡查"} backTo={plan ? `/plans/${plan.id}` : "/inspections"} footer={<div className="m-footer-bar"><Button block color="primary" onClick={create}>建立並開始填寫</Button></div>}>
     {plan && <div className="m-inline-note">{supplement ? "計劃已完成，新增的巡查將標記為補錄。" : `將自動關聯計劃「${plan.name}」。`}</div>}
-    <GroupTitle>巡查計劃模板（只列所屬巡查群組適用的巡查計劃模板）</GroupTitle>
+    <GroupTitle>巡查模板（只列所屬巡查群組適用的模板）</GroupTitle>
     <Radio.Group value={templateId} onChange={(value) => { setTemplateId(String(value)); setObjectId(undefined); }}>
       <div className="m-radio-list">{activeAppTemplates().map((item) => <Radio key={item.id} value={item.id}><strong>{item.name}</strong><small>{item.inspectionType} · {item.items.length} 個項目{item.locationCheck ? ` · 定位 ${item.validDistance} 米` : ""}</small></Radio>)}</div>
     </Radio.Group>
@@ -286,7 +294,7 @@ export function InspectionCreatePage() {
     <Radio.Group value={objectId} onChange={(value) => setObjectId(String(value))}>
       <div className="m-radio-list">{objects.map((object) => <Radio key={object.id} value={object.id}><strong>{object.name}</strong><small>{object.distance} 米 · {object.grid}</small></Radio>)}</div>
     </Radio.Group>
-    {!objects.length && <Empty title="附近沒有適用此巡查計劃模板的對象" />}
+    {!objects.length && <Empty title="附近沒有適用此模板的對象" />}
   </Page>;
 }
 

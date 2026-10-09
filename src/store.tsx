@@ -3,6 +3,7 @@ import { initialState } from "./data";
 import { setGridRegistry } from "./grid-data";
 import type { GridRecord } from "./grid-rules";
 import type { InspectionTemplate as BackOfficeTemplate } from "./inspection-templates";
+import type { PlanTemplate } from "./plan-templates";
 import { normalizeType, type InspectionTypeRecord } from "./inspection-type-rules";
 import { setItemRegistry, upgradeAuxiliary } from "./item-data";
 import { normalizePlan } from "./plan-data";
@@ -27,6 +28,7 @@ interface DemoContextValue extends DemoState {
   saveGrids: (grids: GridRecord[]) => void;
   saveObjects: (objects: ManagedObject[]) => void;
   saveInspectionTemplates: (templates: BackOfficeTemplate[]) => void;
+  savePlanTemplates: (templates: PlanTemplate[]) => void;
   saveInspectionTypes: (types: InspectionTypeRecord[]) => void;
   saveItemTypes: (types: ItemTypeRecord[]) => void;
   saveItems: (items: ManagedItem[]) => void;
@@ -96,6 +98,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     saveGrids: (grids) => setState((current) => ({ ...current, grids })),
     saveObjects: (objects) => setState((current) => ({ ...current, objects })),
     saveInspectionTemplates: (inspectionTemplates) => setState((current) => ({ ...current, inspectionTemplates })),
+    savePlanTemplates: (planTemplates) => setState((current) => ({ ...current, planTemplates })),
     saveInspectionTypes: (inspectionTypes) => setState((current) => ({ ...current, inspectionTypes })),
     saveItemTypes: (itemTypes) => setState((current) => ({ ...current, itemTypes })),
     saveItems: (items) => setState((current) => ({ ...current, items })),

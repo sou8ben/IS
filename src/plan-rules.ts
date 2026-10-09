@@ -6,9 +6,9 @@ export type InspectionSource = PlannedSource | "現場建立";
 export type PlanStatus = "未開始" | "進行中" | "已中止" | "已完成";
 
 /**
- * Copy of the plan's 巡查計劃模板 and chosen objects taken when the plan is created; later template edits never change it.
- * `items` are the template's inspection items at creation, which the App gives to the plan's inspections.
- * (Plans created before 巡查計劃模板 drove plans carry a plan-template `version` and `bufferM` instead of `templateUpdatedAt`.)
+ * Copy of the plan's 巡查計劃模板 (route, objects and the 巡查模板 each object uses) taken when the plan is created; later template edits never change it.
+ * `templates` hold each 巡查模板's inspection items at creation, which the App gives to the plan's inspections.
+ * (Plans created straight from one 巡查模板, before 巡查計劃模板 existed, carry that 巡查模板 as `templateId` with its `items`.)
  */
 export interface PlanSnapshot<I = unknown> {
   templateId: string;
@@ -18,6 +18,7 @@ export interface PlanSnapshot<I = unknown> {
   route: Point[];
   bufferM?: number;
   objects: { objectId: string; templateIds: string[] }[];
+  templates?: { templateId: string; name: string; updatedAt: string; items: I[] }[];
   items?: I[];
   takenAt: string;
 }
@@ -65,8 +66,8 @@ export interface PlanInspectionRow {
   app?: AppInspectionLike;
 }
 
-/** `objectIds` and `allowedGroupIds` (the template's applicable inspection groups; empty = any) are checked when given. */
-export interface PlanForm { name: string; templateId: string; groupId: string; startAt: string; endAt: string; objectIds?: string[]; allowedGroupIds?: string[] }
+/** `templateId` is the 巡查計劃模板; `allowedGroupIds` (its applicable inspection groups; empty = any) is checked when given. */
+export interface PlanForm { name: string; templateId: string; groupId: string; startAt: string; endAt: string; allowedGroupIds?: string[] }
 
 export const isEditable = (status: string) => status === "未開始";
 export const isEnded = (status: string) => status === "已完成" || status === "已中止";
@@ -118,7 +119,6 @@ export function validatePlanForm(form: PlanForm): string[] {
   if (!name) errors.push("請輸入計劃名稱。");
   else if ([...name].length > 50) errors.push("計劃名稱不可超過 50 字。");
   if (!form.templateId) errors.push("請選擇巡查計劃模板。");
-  if (form.objectIds && !form.objectIds.length) errors.push("請選擇至少 1 個巡查對象。");
   if (!form.groupId) errors.push("請選擇巡查群組。");
   else if (form.allowedGroupIds?.length && !form.allowedGroupIds.includes(form.groupId)) errors.push("所選巡查群組不在巡查計劃模板的適用群組內。");
   if (!form.startAt || !form.endAt) errors.push("請填寫開始及結束時間。");

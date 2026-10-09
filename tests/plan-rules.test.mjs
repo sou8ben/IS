@@ -71,11 +71,14 @@ test("synthesized tracks follow the route up to the given share", () => {
   assert.deepEqual(synthesizeTrack(snapshot.route, 0, "09:00"), []);
   assert.deepEqual(synthesizeTrack([[0, 0]], 1, "09:00"), []);
 });
-test("plan objects and the template's applicable groups are checked when given", () => {
-  assert.deepEqual(validatePlanForm(form({ objectIds: ["OBJ-A"], allowedGroupIds: ["inspect-north"] })), []);
-  assert.ok(validatePlanForm(form({ objectIds: [] })).some((e) => e.includes("至少 1 個巡查對象")));
-  assert.ok(validatePlanForm(form({ allowedGroupIds: ["inspect-island"] })).some((e) => e.includes("適用群組")));
+test("the 巡查計劃模板's applicable groups are checked when given", () => {
+  assert.deepEqual(validatePlanForm(form({ allowedGroupIds: ["inspect-north"] })), []);
+  assert.ok(validatePlanForm(form({ allowedGroupIds: ["inspect-island"] })).some((e) => e.includes("巡查計劃模板的適用群組")));
   assert.deepEqual(validatePlanForm(form({ allowedGroupIds: [] })), [], "a template listing no groups allows any inspection group");
+});
+test("a plan from a route-only 巡查計劃模板 starts with no inspections", () => {
+  const empty = { ...snapshot, objects: [] };
+  assert.deepEqual(buildPlannedInspections(empty, [], "20260930"), []);
 });
 test("majority picks the most frequent value, the first seen on a tie", () => {
   assert.equal(majority(["北區", "中區", "北區"]), "北區"); assert.equal(majority(["中區", "北區"]), "中區"); assert.equal(majority([]), undefined);

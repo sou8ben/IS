@@ -44,7 +44,7 @@ export const myLocation = { x: 652, y: 194, accuracy: 8 };
 
 export const photoAssets = { seat: asset("app/seat.svg"), bin: asset("app/bin.svg"), tree: asset("app/tree.svg"), sign: asset("app/sign.svg"), pipe: asset("app/pipe.svg") };
 
-// ---- 巡查計劃模板 ----
+// ---- 巡查模板 ----
 // Baseline App templates: membership, order, required and attachments are fixed here; the item fields
 // (name, type, kind, options, abnormal values, summaries) come live from the managed 巡查項目 via `itemId` (see item-data.ts).
 // Completed seed inspections keep this baseline as their snapshot.

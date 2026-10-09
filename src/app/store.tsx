@@ -93,8 +93,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const missing = shared.plans.flatMap((plan) => (plan.inspections ?? []).filter((entry) => entry.source !== "補入" && !stateRef.current.inspections.some((item) => item.id === entry.id)).map((entry) => ({ planId: plan.id, entry })));
     if (!missing.length) return;
-    // inspections of the plan's own 巡查計劃模板 take the template items from the plan snapshot, so later template edits do not change them
-    const snapshotItems = (planId: string, templateId: string) => { const snapshot = shared.plans.find((plan) => plan.id === planId)?.snapshot; return snapshot?.items && snapshot.templateId === templateId ? structuredClone(snapshot.items) : undefined; };
+    // inspections of a plan take their 巡查模板 items from the plan snapshot, so later edits to the 巡查模板 or 巡查計劃模板 do not change them
+    const snapshotItems = (planId: string, templateId: string) => { const snapshot = shared.plans.find((plan) => plan.id === planId)?.snapshot; const own = snapshot?.templates?.find((entry) => entry.templateId === templateId); return own ? structuredClone(own.items) : snapshot?.items && snapshot.templateId === templateId ? structuredClone(snapshot.items) : undefined; };
     const added: Inspection[] = missing.map(({ planId, entry }) => ({ id: entry.id, planId, objectId: entry.objectId, templateId: entry.templateId, seq: entry.seq, status: "未完成", results: {}, items: snapshotItems(planId, entry.templateId) }));
     const inspections = [...stateRef.current.inspections, ...added];
     setState((current) => ({ ...current, inspections: [...current.inspections, ...added.filter((item) => !current.inspections.some((existing) => existing.id === item.id))] }));
@@ -187,7 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     supplementInspection: (id, reason, results) => patch({ inspections: state.inspections.map((item) => item.id === id ? { ...item, items: item.items ?? itemsForInspection(item), results, supplements: [...(item.supplements ?? []), { reason, time: nowText(), operator: persona.name }] } : item) }),
     addInspection: (objectId, templateId, planId) => {
       const id = nextCode("IN", state.inspections.map((item) => item.id));
-      const inspections = [...state.inspections, { id, planId, objectId, templateId, seq: state.inspections.filter((item) => item.planId === planId).length + 1, status: "未完成" as const, results: {} }];
+      const inspections = [...state.inspections, { id, planId, objectId, templateId, seq: state.inspections.filter((item) => item.planId === planId).length + 1, status: "未完成" as const, results: {}, ...(planId ? { onSite: true } : {}) }];
       patch({ inspections });
       syncPlanProgress(planId, inspections);
       return id;

@@ -62,6 +62,23 @@ export function isGroupWork(work: Work, persona: Persona, plans: Plan[]) {
 }
 export const visiblePlans = (plans: Plan[], persona: Persona) => plans.filter((plan) => persona.groups.some((group) => group.kind === "巡查" && group.name === plan.group));
 
+// ---- 巡查計劃列表：執行數據與合併顯示 ----
+export interface PlanStats { planned: number; done: number; linked: number; onSite: number; works: number; events: number }
+/**
+ * What a plan card shows. 計劃內 inspections are the ones scheduled with the plan (including extra ones added in the back office);
+ * 現場新增 ones were added in the App during the work. Only 計劃內 inspections count towards 已執行 / 需巡查.
+ */
+export function planStats(planId: string, inspections: Pick<Inspection, "planId" | "status" | "onSite">[], works: { planId?: string; voided?: boolean }[], events: { planId?: string }[]): PlanStats {
+  const linked = inspections.filter((item) => item.planId === planId);
+  const planned = linked.filter((item) => !item.onSite);
+  return { planned: planned.length, done: planned.filter((item) => item.status === "已完成").length, linked: linked.length, onSite: linked.length - planned.length, works: works.filter((work) => work.planId === planId && !work.voided).length, events: events.filter((event) => event.planId === planId).length };
+}
+/** Only plans that can be started again can be shown merged: 未開始 or 已中止. */
+export const isMergeable = (plan: Pick<Plan, "status">) => plan.status === "未開始" || plan.status === "已中止";
+export const PLAN_COLORS = ["#2f6fd6", "#8e44ad", "#0f8f7e", "#d9822b", "#c2410c", "#4b5563"];
+/** The letter and colour that mark the n-th plan of a merged display. */
+export const planTag = (index: number) => ({ letter: String.fromCharCode(65 + (index % 26)), color: PLAN_COLORS[index % PLAN_COLORS.length] });
+
 // ---- 自動分派（詳細設計 6.4） ----
 export function dispatchWork(type: string, grid: string, objectId?: string) {
   const top = topType(type);

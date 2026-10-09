@@ -45,7 +45,7 @@ export function seedHistoryRecords(): InspectionRecord[] {
   rounds.forEach((date, round) => {
     let serial = 301;
     sets.forEach((set) => {
-      // the App's original templates keep their result keys; the others come from 巡查計劃模板 (keys = item ids)
+      // the App's original templates keep their result keys; the others come from 巡查模板 (keys = item ids)
       const template = baselineTemplates.find((item) => item.id === set.templateId) ?? appTemplate(set.templateId);
       if (!template) return;
       set.objectIds.forEach((objectId, objectIndex) => {

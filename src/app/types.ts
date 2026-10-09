@@ -39,7 +39,7 @@ export interface InspectionTemplate {
   validDistance: number;
   checkOn: ("開始填寫" | "提交")[];
   items: TemplateItem[];
-  /** From the back-office 巡查計劃模板: its status, per-object effective-distance overrides and listed objects (none = all of the type). */
+  /** From the back-office 巡查模板: its status, per-object effective-distance overrides and listed objects (none = all of the type). */
   status?: "生效" | "失效";
   objectDistances?: Record<string, number>;
   objectIds?: string[];
@@ -78,6 +78,8 @@ export interface Inspection {
   location?: { passed: boolean; distance: number; accuracy: number; nfc?: string };
   supplements?: { reason: string; time: string; operator: string }[];
   pendingSync?: boolean;
+  /** Added in the App while working a plan (not scheduled with the plan). */
+  onSite?: boolean;
   /** The template items as they were when the inspection was submitted, so later item changes never alter it. */
   items?: TemplateItem[];
 }

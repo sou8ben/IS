@@ -40,13 +40,13 @@ test("renaming is allowed only while nothing uses the type", () => {
   assert.equal(canRename(unused), true); assert.equal(renameBlockReason(unused), null);
   assert.equal(canRename({ ...unused, items: 1 }), false);
   assert.match(renameBlockReason({ ...unused, objects: 3, items: 2 }), /3 個對象、2 個巡查項目/);
-  assert.match(renameBlockReason({ ...unused, templates: 1 }), /1 個巡查計劃模板.*失效/);
+  assert.match(renameBlockReason({ ...unused, templates: 1 }), /1 個巡查模板.*失效/);
 });
 test("a type cannot be disabled while it has active objects or templates", () => {
   const usage = { objects: 5, activeObjects: 0, templates: 2, activeTemplates: 0, items: 3 };
   assert.equal(deactivationBlock(usage), null, "inactive objects and templates do not block");
   assert.match(deactivationBlock({ ...usage, activeObjects: 2 }), /2 個啟用中的對象.*失效/);
-  assert.match(deactivationBlock({ ...usage, activeObjects: 2, activeTemplates: 1 }), /2 個啟用中的對象及 1 個生效中的巡查計劃模板/);
+  assert.match(deactivationBlock({ ...usage, activeObjects: 2, activeTemplates: 1 }), /2 個啟用中的對象及 1 個生效中的巡查模板/);
 });
 test("ids continue the highest number", () => { assert.equal(nextTypeId(["1", "5", "x"]), "6"); assert.equal(nextTypeId([]), "1"); });
 test("stored types in the old shape are brought up to date", () => {

@@ -705,3 +705,15 @@ html.is-host body { background: #eef1f5; min-width: 1000px; }
 @media (max-height: 880px) { .device { zoom: .78; } }
 @media (max-height: 760px) { .device { zoom: .68; } }
 
+
+/* 巡查計劃：合併顯示（只是介面上的合併，各計劃用字母及顏色分辨） */
+.m-plan-strip.merged { align-items: flex-start; }
+.m-merge-chips { display: flex; flex-wrap: wrap; gap: 6px 8px; min-width: 0; flex: 1; }
+.m-merge-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 2px 8px 2px 3px; border: 1px solid var(--app-line); border-radius: 12px; background: #fafbfc; font-size: var(--fs-sm); }
+.m-merge-chip i, .m-merge-group i { width: 18px; height: 18px; flex: none; border-radius: 50%; color: #fff; font-style: normal; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.m-merge-chip b { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 500; color: var(--app-text); }
+.m-merge-chip em { flex: none; font-style: normal; color: var(--app-text-3); font-variant-numeric: tabular-nums; }
+.m-merge-group { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #f5f6f8; border-bottom: 1px solid var(--app-line-2); font-size: var(--fs-sm); }
+.m-merge-group strong { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
+.m-merge-group span { flex: none; color: var(--app-text-3); }
+.m-insp-index.tagged { font-size: 11px; letter-spacing: -.3px; }

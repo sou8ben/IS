@@ -1,21 +1,37 @@
 import { useEffect, useState } from "react";
 import { directory, eventMeta, initialAppState, METERS_PER_PX, myTrack, planObjects, planRoutes, planTemplateOf, workMeta } from "./app/data";
 import { isAbnormal } from "./app/rules";
-import { getManagedObjects, getObject, getObjects } from "./object-data";
-import { activeAppTemplates, inspectionTemplateName, itemsForInspection, liveAppTemplates } from "./item-data";
-import type { Inspection, InspectionTemplate as AppTemplate, MapObject, PlanOp, TemplateItem, WorkLog } from "./app/types";
+import { getObject, getObjects } from "./object-data";
+import { activeAppTemplates, appTemplate, inspectionTemplateName, itemsForInspection, liveAppTemplates } from "./item-data";
+import type { Inspection, PlanOp, TemplateItem, WorkLog } from "./app/types";
+import type { InspectionTemplate as BackOfficeTemplate } from "./inspection-templates";
+import { seedPlanTemplateOf, seedPlanTemplates } from "./plan-template-data";
+import { planRoute, templateIdsOf, type PlanTemplate } from "./plan-templates";
 import { synthesizeTrack, trackLength, type PlanInspectionRow, type PlanSnapshot, type Point } from "./plan-rules";
 import type { EventRecord, Plan, Work } from "./types";
 
 export const APP_STATE_KEY = "is-app-demo-v1";
 
-/** The 巡查計劃模板 a plan uses: its own id, else (older plans) the template its snapshot's objects use, else the seed plan's template. */
-export function templateIdOfPlan(plan: Pick<Plan, "id" | "templateId" | "snapshot">): string {
-  return plan.templateId ?? (plan.snapshot && !plan.snapshot.templateId.startsWith("PT") ? plan.snapshot.templateId : plan.snapshot?.objects[0]?.templateIds[0]) ?? planTemplateOf[plan.id] ?? "";
+/**
+ * The 巡查模板 ids a plan's inspections use: its snapshot's objects and its inspections, else the single 巡查模板 of a plan
+ * made straight from one 巡查模板 (before 巡查計劃模板 existed).
+ */
+export function templateIdsOfPlan(plan: Pick<Plan, "id" | "templateId" | "snapshot" | "inspections">): string[] {
+  const used = [...new Set([...(plan.snapshot?.objects.flatMap((object) => object.templateIds) ?? []), ...(plan.inspections ?? []).map((item) => item.templateId)])];
+  if (used.length) return used;
+  const single = plan.templateId ?? planTemplateOf[plan.id];
+  return single ? [single] : [];
 }
-/** Brings a stored plan up to date: plans made from the retired plan templates get their 巡查計劃模板 id and name. */
+/** The first 巡查模板 of the plan (the one an extra or supplementary inspection starts from). */
+export const templateIdOfPlan = (plan: Pick<Plan, "id" | "templateId" | "snapshot" | "inspections">): string => templateIdsOfPlan(plan)[0] ?? "";
+
+let seedNames: Record<string, string> | undefined;
+const seedPlanTemplateName = (id: string) => (seedNames ??= Object.fromEntries(seedPlanTemplates().map((template) => [template.id, template.name])))[id];
+/** Brings a stored plan up to date: seed plans get their 巡查計劃模板, older plans their single 巡查模板 id and name. */
 export function normalizePlan(plan: Plan): Plan {
-  if (plan.templateId) return plan;
+  const seedId = seedPlanTemplateOf[plan.id];
+  if (!plan.planTemplateId && seedId) return { ...plan, planTemplateId: seedId, template: seedPlanTemplateName(seedId) ?? plan.template, templateId: plan.templateId ?? templateIdOfPlan(plan) };
+  if (plan.planTemplateId || plan.templateId) return plan;
   const templateId = templateIdOfPlan(plan);
   return templateId ? { ...plan, templateId, template: inspectionTemplateName(templateId) } : plan;
 }
@@ -25,24 +41,26 @@ export function snapshotOf(plan: Plan): PlanSnapshot<TemplateItem> | undefined {
   if (plan.snapshot) return plan.snapshot;
   if (!planRoutes[plan.id]) return undefined;
   const templateId = templateIdOfPlan(plan);
-  return { templateId, templateName: inspectionTemplateName(templateId), route: planRoutes[plan.id], objects: (planObjects[plan.id] ?? []).map((object) => ({ objectId: object.id, templateIds: [templateId] })), takenAt: plan.createdAt ?? plan.startAt.slice(0, 10) };
+  return { templateId: plan.planTemplateId ?? templateId, templateName: plan.planTemplateId ? plan.template : inspectionTemplateName(templateId), route: planRoutes[plan.id], objects: (planObjects[plan.id] ?? []).map((object) => ({ objectId: object.id, templateIds: [templateId] })), takenAt: plan.createdAt ?? plan.startAt.slice(0, 10) };
 }
 
-/** Objects a 巡查計劃模板 can be planned for: active managed objects of its inspection type, limited to its listed objects when it lists any (in that order). */
-export function planCandidates(template: Pick<AppTemplate, "inspectionType" | "objectIds">): MapObject[] {
-  const managed = getManagedObjects().filter((object) => object.status === "啟用" && object.inspectionType === template.inspectionType);
-  const listed = template.objectIds?.length ? template.objectIds.flatMap((id) => managed.filter((object) => object.id === id)) : managed;
-  return listed.flatMap((object) => getObject(object.id) ?? []);
-}
-/** Snapshot of a 巡查計劃模板 and the chosen objects (in route order) when a plan is created. */
-export function snapshotFromTemplate(template: AppTemplate, templateUpdatedAt: string, objectIds: string[], takenAt: string): PlanSnapshot<TemplateItem> {
-  const route = objectIds.flatMap((id): Point[] => { const object = getObject(id); return object ? [[object.x, object.y]] : []; });
-  return { templateId: template.id, templateName: template.name, templateUpdatedAt, route, objects: objectIds.map((objectId) => ({ objectId, templateIds: [template.id] })), items: structuredClone(template.items), takenAt };
+/**
+ * Snapshot of a 巡查計劃模板 when a plan is created: its route (the waypoints, else the objects in patrol order), its objects with their
+ * 巡查模板, and the items of each 巡查模板 used, so later edits to either template never change the plan.
+ */
+export function snapshotFromPlanTemplate(template: PlanTemplate, inspectionTemplates: BackOfficeTemplate[], takenAt: string): PlanSnapshot<TemplateItem> {
+  const positions: Record<string, Point | undefined> = Object.fromEntries(template.objects.map((setting) => { const object = getObject(setting.objectId); return [setting.objectId, object ? [Math.round(object.x), Math.round(object.y)] as Point : undefined]; }));
+  return {
+    templateId: template.id, templateName: template.name, templateUpdatedAt: template.updatedAt, route: planRoute(template, positions),
+    objects: template.objects.map((setting) => ({ objectId: setting.objectId, templateIds: [...setting.templateIds] })),
+    templates: templateIdsOf(template).flatMap((id) => { const app = appTemplate(id); const record = inspectionTemplates.find((item) => item.id === id); return app && record ? [{ templateId: id, name: app.name, updatedAt: record.updatedAt, items: structuredClone(app.items) }] : []; }),
+    takenAt,
+  };
 }
 
 export const groupMembers = (groupName: string) => directory.filter((person) => person.dept === groupName).map((person) => person.name);
 export const objectOf = (id: string) => getObject(id);
-/** The 巡查計劃模板 as App inspection forms (all, and the 生效 ones pickers offer). */
+/** The 巡查模板 as App inspection forms (all, and the 生效 ones pickers offer). */
 export { activeAppTemplates, inspectionTemplateName, liveAppTemplates };
 /** Active managed objects: what pickers offer. */
 export const getAllObjects = () => getObjects();

@@ -6,7 +6,7 @@ import { AppOutline, BellOutline, CompassOutline, ExclamationCircleFill, FillinO
 import { DemoProvider } from "../store";
 import { AppProvider, useApp } from "./store";
 import { useDemoBridge } from "./demo";
-import { isMyWork } from "./rules";
+import { isMyWork, planStats } from "./rules";
 import { CheckLockedPage, CheckPermissionPage, CheckUpdatePage, LoginPage } from "./pages/auth";
 import { HomePage } from "./pages/home";
 import { InspectionCreatePage, InspectionFormPage, InspectionListPage, PlanListPage, PlanWorkPage } from "./pages/plans";
@@ -27,7 +27,8 @@ function ActivePlanBar() {
   const active = shared.plans.filter((plan) => plan.status === "進行中" && plan.executor === persona.name);
   if (!active.length) return null;
   const merged = state.mergedPlanIds.length > 1 && active.length > 1;
-  const done = active.reduce((sum, plan) => sum + plan.progress, 0); const total = active.reduce((sum, plan) => sum + plan.total, 0);
+  const stats = active.map((plan) => planStats(plan.id, state.inspections, shared.works, shared.events));
+  const done = stats.reduce((sum, item) => sum + item.done, 0); const total = stats.reduce((sum, item) => sum + item.planned, 0);
   return <button className="m-plan-bar" onClick={() => navigate(merged ? `/plans/merge?ids=${state.mergedPlanIds.join(",")}` : `/plans/${active[0].id}`)}>
     <span className="m-plan-bar-dot" /><div><strong>{merged ? `合併作業 · ${active.length} 個計劃` : active[0].name}</strong><span>作業中 · 已巡查 {done}/{total}</span></div><em>返回作業</em><RightOutline />
   </button>;

@@ -66,7 +66,7 @@ export function InspectionListPage() {
     { key: "id", title: "巡查編號", width: 160 },
     { key: "objectId", title: "巡查對象", width: 190, render: (record) => <span className={record.voided ? "insp-voided" : ""}>{objectName(record.objectId)}</span>, sortValue: (record) => objectName(record.objectId) },
     { key: "planId", title: "所屬計劃", width: 190, render: (record) => planName(record.planId), sortValue: (record) => planName(record.planId) },
-    { key: "template", title: "巡查計劃模板", width: 190, render: (record) => record.snapshot.name, sortValue: (record) => record.snapshot.name },
+    { key: "template", title: "巡查模板", width: 170, render: (record) => record.snapshot.name, sortValue: (record) => record.snapshot.name },
     { key: "source", title: "來源", width: 80 },
     { key: "inspector", title: "巡查人員", width: 100, render: (record) => record.inspector ?? "—", sortValue: (record) => record.inspector ?? "" },
     { key: "status", title: "狀態", width: 90, render: (record) => <StatusTag>{record.status}</StatusTag> },
@@ -82,7 +82,7 @@ export function InspectionListPage() {
         <label className="filter-field"><span>巡查編號</span><input aria-label="巡查編號" value={filters.id} onChange={(event) => filter("id", event.target.value)} placeholder="請輸入巡查編號" /></label>
         <label className="filter-field"><span>巡查對象</span><input aria-label="巡查對象" value={filters.object} onChange={(event) => filter("object", event.target.value)} placeholder="請輸入對象名稱" /></label>
         <label className="filter-field"><span>所屬計劃</span><input aria-label="所屬計劃" value={filters.plan} onChange={(event) => filter("plan", event.target.value)} placeholder="計劃編號或名稱" /></label>
-        <label className="filter-field"><span>巡查計劃模板</span><Select ariaLabel="巡查計劃模板" value={filters.template} onChange={(value) => filter("template", value)}><option value="">全部巡查計劃模板</option>{unique(all.map((record) => record.snapshot.name)).map((name) => <option key={name}>{name}</option>)}</Select></label>
+        <label className="filter-field"><span>巡查模板</span><Select ariaLabel="巡查模板" value={filters.template} onChange={(value) => filter("template", value)}><option value="">全部巡查模板</option>{unique(all.map((record) => record.snapshot.name)).map((name) => <option key={name}>{name}</option>)}</Select></label>
         <label className="filter-field"><span>巡查人員</span><input aria-label="巡查人員" value={filters.inspector} onChange={(event) => filter("inspector", event.target.value)} placeholder="請輸入人員姓名" /></label>
         <label className="filter-field"><span>狀態</span><Select ariaLabel="狀態" value={filters.status} onChange={(value) => filter("status", value)}><option value="">全部狀態</option><option>未完成</option><option>已完成</option></Select></label>
         <label className="filter-field"><span>結果</span><Select ariaLabel="結果" value={filters.result} onChange={(value) => filter("result", value)}><option value="">全部結果</option><option>正常</option><option>異常</option><option>待填寫</option></Select></label>
@@ -111,12 +111,12 @@ export function InspectionCreatePage() {
   const templateOptions = plan ? templatesFromIds(planObjects.find((entry) => entry.objectId === effectiveObject)?.templateIds ?? []) : templatesForObject(effectiveObject);
   const effectiveTemplate = templateOptions.some((template) => template.id === templateId) ? templateId : templateOptions[0]?.id ?? "";
   const create = () => {
-    if (!effectiveObject || !effectiveTemplate) { setError("請選擇巡查對象及巡查計劃模板。"); return; }
-    if (plan && all.some((record) => record.planId === plan.id && record.objectId === effectiveObject && record.templateId === effectiveTemplate && !record.voided)) { setError("此計劃已有相同對象及巡查計劃模板的巡查。"); return; }
+    if (!effectiveObject || !effectiveTemplate) { setError("請選擇巡查對象及巡查模板。"); return; }
+    if (plan && all.some((record) => record.planId === plan.id && record.objectId === effectiveObject && record.templateId === effectiveTemplate && !record.voided)) { setError("此計劃已有相同對象及巡查模板的巡查。"); return; }
     const time = nowText();
     const id = nextIds("IN", [...all.map((record) => record.id), ...plans.flatMap((item) => (item.inspections ?? []).map((entry) => entry.id))], dateKey(time), 1)[0];
     const seq = plan ? Math.max(0, ...all.filter((record) => record.planId === plan.id).map((record) => record.seq), ...(plan.inspections ?? []).map((entry) => entry.seq)) + 1 : 1;
-    const record: InspectionRecord = { id, origin: "後台", planId: plan?.id, objectId: effectiveObject, templateId: effectiveTemplate, snapshot: templateSnapshotOf(effectiveTemplate, time), seq, status: "未完成", source: plan ? "計劃" : "獨立", inspector: inspector || undefined, results: {}, changes: [{ time, operator: signedInUser, action: "建立巡查", detail: `${plan ? `加入計劃 ${plan.id}` : "獨立巡查"}；巡查計劃模板「${inspectionTemplateName(effectiveTemplate)}」已複製為快照` }], createdBy: signedInUser, createdAt: time };
+    const record: InspectionRecord = { id, origin: "後台", planId: plan?.id, objectId: effectiveObject, templateId: effectiveTemplate, snapshot: templateSnapshotOf(effectiveTemplate, time), seq, status: "未完成", source: plan ? "計劃" : "獨立", inspector: inspector || undefined, results: {}, changes: [{ time, operator: signedInUser, action: "建立巡查", detail: `${plan ? `加入計劃 ${plan.id}` : "獨立巡查"}；模板「${inspectionTemplateName(effectiveTemplate)}」已複製為快照` }], createdBy: signedInUser, createdAt: time };
     saveInspectionRecord(record);
     if (plan) updatePlan(plan.id, { inspections: [...(plan.inspections ?? []), { id, objectId: effectiveObject, templateId: effectiveTemplate, seq, source: "額外加入", addedBy: signedInUser, addedAt: time }], total: plan.total + 1, changes: [...(plan.changes ?? []), { time, operator: signedInUser, action: "增加巡查", detail: `由巡查記錄新增 ${id}` }] });
     showToast("巡查已建立（未完成），請填寫巡查項目並提交"); navigate(`/inspections/${id}`);
@@ -124,13 +124,13 @@ export function InspectionCreatePage() {
   const people = unique(directory.map((person) => person.name));
   return <div className="page-content insp-create-page">
     <PageHeader eyebrow="巡查記錄 / 新增巡查" title="新增巡查" actions={<><Button onClick={() => navigate("/inspections")}>取消</Button><Button variant="primary" icon={<CheckOutlined />} onClick={create}>建立巡查</Button></>} />
-    <section className="panel form-section insp-create-form"><header><h2>巡查設定</h2><span>建立後狀態為「未完成」，於詳情頁按巡查計劃模板填寫並提交</span></header>
+    <section className="panel form-section insp-create-form"><header><h2>巡查設定</h2><span>建立後狀態為「未完成」，於詳情頁按模板填寫並提交</span></header>
       {error && <div className="insp-error" role="alert">{error}</div>}
       <div className="form-grid two-col">
         <Field label="所屬計劃" hint="不選即為獨立巡查；只列未開始或進行中的計劃"><Select ariaLabel="所屬計劃" value={planId} onChange={(value) => { setPlanId(value); setError(""); }}><option value="">獨立巡查（不屬任何計劃）</option>{openPlans.map((item) => <option key={item.id} value={item.id}>{item.name}（{item.id}）</option>)}</Select></Field>
         <Field label="巡查人員"><Select ariaLabel="巡查人員" value={inspector} onChange={setInspector}><option value="">未指定（由填寫者提交時記錄）</option>{people.map((name) => <option key={name}>{name}</option>)}</Select></Field>
         <Field label="巡查對象" required><Select ariaLabel="巡查對象" value={effectiveObject} onChange={(value) => { setObjectId(value); setError(""); }}>{objectOptions.map((object) => <option key={object.id} value={object.id}>{object.name}（{object.grid}）</option>)}</Select></Field>
-        <Field label="巡查計劃模板" required hint="建立時複製巡查計劃模板快照，之後巡查計劃模板更改不影響此巡查"><Select ariaLabel="巡查計劃模板" value={effectiveTemplate} onChange={(value) => { setTemplateId(value); setError(""); }}>{templateOptions.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</Select></Field>
+        <Field label="巡查模板" required hint="建立時複製模板快照，之後模板更改不影響此巡查"><Select ariaLabel="巡查模板" value={effectiveTemplate} onChange={(value) => { setTemplateId(value); setError(""); }}>{templateOptions.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</Select></Field>
       </div>
       {effectiveTemplate && <TemplatePreview templateId={effectiveTemplate} />}
     </section>
@@ -140,7 +140,7 @@ export function InspectionCreatePage() {
 function templatesFromIds(ids: string[]) { return liveAppTemplates().filter((template) => ids.includes(template.id)); }
 function TemplatePreview({ templateId }: { templateId: string }) {
   const snapshot = templateSnapshotOf(templateId, "");
-  return <div className="insp-template-preview"><strong>巡查計劃模板內容預覽</strong><span>{snapshot.items.length} 個巡查項目（必填 {snapshot.items.filter((item) => item.required).length}）· 定位檢查{snapshot.locationCheck ? `開啟，有效距離 ${snapshot.validDistance} 米（${snapshot.checkOn.join("、")}）` : "關閉"}</span>
+  return <div className="insp-template-preview"><strong>模板內容預覽</strong><span>{snapshot.items.length} 個巡查項目（必填 {snapshot.items.filter((item) => item.required).length}）· 定位檢查{snapshot.locationCheck ? `開啟，有效距離 ${snapshot.validDistance} 米（${snapshot.checkOn.join("、")}）` : "關閉"}</span>
     <ul>{groupItems(snapshot.items).map((group) => <li key={group.type}><b>{group.type}</b>{group.items.map(({ item }) => <em key={item.key}>{item.required && "＊"}{item.name}{item.minAttachments ? `（附件≥${item.minAttachments}）` : ""}</em>)}</li>)}</ul></div>;
 }
 
@@ -239,7 +239,7 @@ function InspectionDetail({ record, stored }: { record: InspectionRecord; stored
     {record.voided && <div className="insp-void-banner" role="status"><StopOutlined /><span><strong>此巡查已作廢</strong>，不參與統計報表計算。原因：{record.voidReason}</span></div>}
     <div className="status-strip insp-status-strip">
       <div><span>巡查編號</span><strong>{record.id}</strong></div><div><span>狀態</span><StatusTag>{record.status}</StatusTag></div><div><span>結果</span><StatusTag tone={resultTone(result)}>{result}</StatusTag></div>
-      <div><span>巡查計劃模板</span><strong>{record.snapshot.name}（快照）</strong></div><div><span>所屬計劃</span>{plan ? <Link to={`/plans/${plan.id}`}>{plan.name}</Link> : <strong>獨立巡查</strong>}</div>
+      <div><span>巡查模板</span><strong>{record.snapshot.name}（快照）</strong></div><div><span>所屬計劃</span>{plan ? <Link to={`/plans/${plan.id}`}>{plan.name}</Link> : <strong>獨立巡查</strong>}</div>
       <div><span>巡查人員</span><strong>{record.inspector ?? "未指定"}</strong></div><div><span>提交時間</span><strong>{record.submittedAt ?? "—"}</strong></div>
       <div><span>定位校驗</span>{record.location ? <StatusTag tone={record.location.passed ? "success" : "danger"}>{record.location.nfc ? "NFC 輔助" : record.location.passed ? "通過" : "不通過"}</StatusTag> : <strong>{record.snapshot.locationCheck ? "待校驗" : "不需要"}</strong>}</div>
     </div>

@@ -54,8 +54,8 @@ export function Empty({ title, text }: { title: string; text?: string }) {
 // ---- 地圖組件（詳細設計 13.3：本地政府底圖，不使用第三方地圖） ----
 export interface MapMarker { id: string; x: number; y: number; tone?: "todo" | "done" | "issue" | "work" | "event" | "active"; index?: ReactNode; title?: string; subtitle?: ReactNode; openLabel?: string; onOpen?: () => void }
 
-export function MapView({ markers = [], routes, track, showTrackIndex, me = true, legend, pick, onPick, initial, className = "" }: {
-  markers?: MapMarker[]; routes?: [number, number][][]; track?: [number, number, string?][]; showTrackIndex?: boolean; me?: boolean; legend?: ReactNode;
+export function MapView({ markers = [], routes, routeColors, track, showTrackIndex, me = true, legend, pick, onPick, initial, className = "" }: {
+  markers?: MapMarker[]; routes?: [number, number][][]; /** One colour per route (a merged plan display); routes without one use the default. */ routeColors?: string[]; track?: [number, number, string?][]; showTrackIndex?: boolean; me?: boolean; legend?: ReactNode;
   pick?: boolean; onPick?: (point: { x: number; y: number }) => void; initial?: { x: number; y: number; zoom: number }; className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -112,7 +112,7 @@ export function MapView({ markers = [], routes, track, showTrackIndex, me = true
     {size && view && <div className="m-map-layer" style={{ width: layerW, height: layerH, transform: `translate(${left}px, ${top}px)` }}>
       <img src={asset("macau-operations-map.png")} alt="澳門底圖" draggable={false} />
       <svg viewBox={`0 0 ${MAP_SIZE.width} ${MAP_SIZE.height}`} preserveAspectRatio="none" aria-hidden>
-        {routes?.map((route, index) => <polyline key={index} className="m-map-route" points={route.map((point) => point.join(",")).join(" ")} />)}
+        {routes?.map((route, index) => <polyline key={index} className="m-map-route" style={routeColors?.[index] ? { stroke: routeColors[index] } : undefined} points={route.map((point) => point.join(",")).join(" ")} />)}
         {track && <polyline className="m-map-track" points={track.map(([x, y]) => `${x},${y}`).join(" ")} />}
       </svg>
       {track?.map(([x, y, time], index) => <span key={`${x}-${y}-${index}`} className={`m-map-trackdot ${showTrackIndex ? "numbered" : ""}`} style={pct(x, y)} title={time}>{showTrackIndex ? index + 1 : null}</span>)}

@@ -172,18 +172,18 @@ export function validateTemplate(template: InspectionTemplate, all: InspectionTe
   const add = (tab: TemplateTab, message: string) => errors.push({ tab, message });
   const others = all.filter((item) => item.id !== template.id);
   const code = template.code.trim(); const name = template.name.trim();
-  if (!code) add("basic", "請輸入巡查計劃模板編號。");
-  else if (others.some((item) => item.code.trim().toLowerCase() === code.toLowerCase())) add("basic", `巡查計劃模板編號「${code}」已存在。`);
-  if (!name) add("basic", "請輸入巡查計劃模板名稱。");
-  else if ([...name].length > 50) add("basic", "巡查計劃模板名稱不可超過 50 字。");
-  else if (template.inspectionType && others.some((item) => item.inspectionType === template.inspectionType && item.name.trim() === name)) add("basic", `「${template.inspectionType}」已有同名巡查計劃模板「${name}」。`);
+  if (!code) add("basic", "請輸入模板編號。");
+  else if (others.some((item) => item.code.trim().toLowerCase() === code.toLowerCase())) add("basic", `模板編號「${code}」已存在。`);
+  if (!name) add("basic", "請輸入模板名稱。");
+  else if ([...name].length > 50) add("basic", "模板名稱不可超過 50 字。");
+  else if (template.inspectionType && others.some((item) => item.inspectionType === template.inspectionType && item.name.trim() === name)) add("basic", `「${template.inspectionType}」已有同名模板「${name}」。`);
   if (!template.inspectionType) add("basic", "請選擇巡查類型。");
   else if (!types.includes(template.inspectionType)) add("basic", "巡查類型不存在。");
   if (template.locationCheck) {
     if (!isIntIn(template.validDistance, DISTANCE_MIN, DISTANCE_MAX)) add("basic", `有效距離須為 ${DISTANCE_MIN}–${DISTANCE_MAX} 米的整數。`);
     if (!template.checkOn.length) add("basic", "定位檢查開啟時須選擇至少一個檢查時點。");
   }
-  if (!template.items.length) add("items", "巡查計劃模板至少需要 1 個巡查項目。");
+  if (!template.items.length) add("items", "模板至少需要 1 個巡查項目。");
   const itemIds = template.items.map((setting) => setting.itemId);
   if (new Set(itemIds).size !== itemIds.length) add("items", "巡查項目不可重複加入。");
   const foreignItems = template.items.filter((setting) => catalog.find((entry) => entry.id === setting.itemId)?.inspectionType !== template.inspectionType);

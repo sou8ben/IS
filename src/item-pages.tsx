@@ -88,7 +88,7 @@ function TypeDrawer({ type, activeItems, onClose, onSaved }: { type: ItemTypeRec
       <div className="evt-form">
         <section className="group-editor-section"><header><h3>類型資料</h3></header><div className="group-editor-grid">
           <Field label="類型名稱" required hint="1–30 字，不可重複，例如 一般設施、供水設施"><input value={name} maxLength={30} onChange={(event) => { setName(event.target.value); setErrors([]); }} placeholder="請輸入類型名稱" /></Field>
-          <Field label="順序" required hint="數字越小越前；巡查項目及巡查計劃模板挑選按此排列"><input type="number" min={1} step={1} value={order} onChange={(event) => { setOrder(event.target.value); setErrors([]); }} /></Field>
+          <Field label="順序" required hint="數字越小越前；巡查項目及模板挑選按此排列"><input type="number" min={1} step={1} value={order} onChange={(event) => { setOrder(event.target.value); setErrors([]); }} /></Field>
         </div></section>
         <StatusSection title="類型狀態" label="類型生效" value={status} onChange={toggle} count={{ label: "生效中的巡查項目", value: `${activeItems} 個` }} />
       </div>
@@ -113,7 +113,7 @@ function ItemsPanel({ activeType, creating, openId }: { activeType: string; crea
     setEditing({ id: "", code: "", name: "", inspectionType: "", itemTypeId, inputKind: "單選", options: ["", ""], abnormal: [], order: 1, summaries: [], notifications: [], auxiliary: [], status: "生效", updatedBy: "", updatedAt: "" });
   }, [creating]); // eslint-disable-line react-hooks/exhaustive-deps
   const all = useMemo(() => sortItems(items, typeNames, itemTypes).map((item) => {
-    const usage = itemUsage(item.id, inspectionTemplates, []); // the App inspection forms are the 巡查計劃模板 themselves
+    const usage = itemUsage(item.id, inspectionTemplates, []); // the App inspection forms are the 巡查模板 themselves
     return { ...item, typeName: itemTypeName(item.itemTypeId), usage, refs: usage.templates + usage.appTemplates };
   }), [items, itemTypes, inspectionTypes, inspectionTemplates]); // eslint-disable-line react-hooks/exhaustive-deps
   const rows = all.filter((item) => contains(item.code, filters.code) && contains(item.name, filters.name) && (!filters.type || item.inspectionType === filters.type) && (!activeType || item.itemTypeId === activeType) && (!filters.kind || item.inputKind === filters.kind) && (!filters.status || item.status === filters.status));
@@ -128,7 +128,7 @@ function ItemsPanel({ activeType, creating, openId }: { activeType: string; crea
     { key: "summaries", title: "工作摘要", width: 110, render: (item) => item.summaries.length ? `${item.summaries.length} 個${item.summaries.some((entry) => entry.sla) ? `（${item.summaries.filter((entry) => entry.sla).length} 個自訂時限）` : ""}` : "—", sortValue: (item) => item.summaries.length },
     { key: "notifications", title: "工作通知", width: 90, render: (item) => item.notifications.length ? `${item.notifications.filter((rule) => rule.active).length} / ${item.notifications.length} 啟用` : "—", sortValue: (item) => item.notifications.length },
     { key: "auxiliary", title: "輔助資料", width: 90, render: (item) => item.auxiliary?.length ? `${item.auxiliary.length} 項` : "—", sortValue: (item) => item.auxiliary?.length ?? 0 },
-    { key: "refs", title: "引用巡查計劃模板", width: 150, render: (item) => item.refs ? `${item.usage.templates} 個${item.usage.activeTemplates !== item.usage.templates ? `（${item.usage.activeTemplates} 個生效）` : ""}` : "—" },
+    { key: "refs", title: "引用模板", width: 110, render: (item) => item.refs ? `${item.usage.templates} 個${item.usage.activeTemplates !== item.usage.templates ? `（${item.usage.activeTemplates} 個生效）` : ""}` : "—" },
     { key: "status", title: "狀態", width: 80, render: (item) => <StatusTag tone={item.status === "生效" ? "success" : "neutral"}>{item.status}</StatusTag> },
     { key: "updatedBy", title: "更新人", width: 90 }, { key: "updatedAt", title: "更新時間", width: 150 },
   ] satisfies Column<Row>[]).map((column) => ({ ...column, sortable: true }));
@@ -193,11 +193,11 @@ function BasicTab({ draft, item, isNew, locked, usage, onChange, onBlocked }: { 
     <section className="group-editor-section"><header><h3>項目資料</h3></header><div className="group-editor-grid">
       <Field label="項目編號" hint={isNew ? "可留空，系統自動生成；唯一，儲存後不可修改" : "唯一，不可修改"}><input value={draft.code} maxLength={32} disabled={!isNew} onChange={(event) => onChange({ code: event.target.value })} placeholder="例如 ITEM-034" /></Field>
       <Field label="項目名稱" required hint="1–50 字，同一巡查類型內不可重複，例如 椅子、水管"><input value={draft.name} maxLength={50} onChange={(event) => onChange({ name: event.target.value })} placeholder="請輸入項目名稱" /></Field>
-      <Field label="巡查類型" required hint={locked ? "已被巡查計劃模板使用，不可修改" : "項目只會出現在同類型的巡查計劃模板"}>{locked ? <input value={draft.inspectionType} disabled /> : <Select ariaLabel="巡查類型" value={draft.inspectionType} onChange={(inspectionType) => onChange({ inspectionType, ...(isNew ? { order: nextOrder(inspectionType) } : {}) })}><option value="">請選擇巡查類型</option>{typeOptions.map((type) => <option key={type.id}>{type.name}</option>)}</Select>}</Field>
+      <Field label="巡查類型" required hint={locked ? "已被巡查模板使用，不可修改" : "項目只會出現在同類型的巡查模板"}>{locked ? <input value={draft.inspectionType} disabled /> : <Select ariaLabel="巡查類型" value={draft.inspectionType} onChange={(inspectionType) => onChange({ inspectionType, ...(isNew ? { order: nextOrder(inspectionType) } : {}) })}><option value="">請選擇巡查類型</option>{typeOptions.map((type) => <option key={type.id}>{type.name}</option>)}</Select>}</Field>
       <Field label="項目類型" required hint="巡查表按項目類型分組顯示"><Select ariaLabel="項目類型" value={draft.itemTypeId} onChange={(itemTypeId) => onChange({ itemTypeId })}><option value="">請選擇項目類型</option>{itemTypeOptions.map((type) => <option key={type.id} value={type.id}>{type.name}{type.status === "失效" ? "（失效）" : ""}</option>)}</Select></Field>
-      <Field label="順序" required hint="同一巡查類型內的排列次序，新增巡查計劃模板項目時按此排列"><input type="number" min={1} step={1} value={Number.isFinite(draft.order) ? draft.order : ""} onChange={(event) => onChange({ order: event.target.value === "" ? NaN : Number(event.target.value) })} /></Field>
+      <Field label="順序" required hint="同一巡查類型內的排列次序，新增模板項目時按此排列"><input type="number" min={1} step={1} value={Number.isFinite(draft.order) ? draft.order : ""} onChange={(event) => onChange({ order: event.target.value === "" ? NaN : Number(event.target.value) })} /></Field>
     </div></section>
-    <StatusSection title="項目狀態" label="項目生效" value={draft.status} onChange={toggle} count={{ label: `引用中的巡查計劃模板（${usage.activeTemplates} 個生效）`, value: `${usage.templates} 個` }} />
+    <StatusSection title="項目狀態" label="項目生效" value={draft.status} onChange={toggle} count={{ label: `引用中的巡查模板（${usage.activeTemplates} 個生效）`, value: `${usage.templates} 個` }} />
   </>;
 }
 
@@ -215,7 +215,7 @@ function InputTab({ draft, locked, onChange }: { draft: ManagedItem; locked: boo
   return <>
     <section className="group-editor-section"><header><h3>輸入方式</h3></header><div className="item-kind-grid" role="radiogroup" aria-label="輸入方式">
       {inputKinds.map((kind) => <button type="button" role="radio" key={kind} aria-checked={draft.inputKind === kind} disabled={locked && draft.inputKind !== kind} className={draft.inputKind === kind ? "on" : ""} onClick={() => setKind(kind)}><strong>{kind}</strong><span>{kindHints[kind]}</span></button>)}
-      {locked && <p className="tpl-hint">此項目已被巡查計劃模板使用，輸入方式不可修改；選項及異常值仍可調整，已提交的巡查保留提交時的設定。</p>}
+      {locked && <p className="tpl-hint">此項目已被巡查模板使用，輸入方式不可修改；選項及異常值仍可調整，已提交的巡查保留提交時的設定。</p>}
     </div></section>
     {hasOptions(draft.inputKind) && <section className="group-editor-section"><header><h3>選項及異常值</h3></header><div className="item-options-editor">
       <p className="tpl-hint">{draft.inputKind === "是非" ? "是非題固定為「是／否」，請標示哪個答案代表異常。" : `${draft.inputKind}需 2–${OPTIONS_MAX} 個選項；標示為異常的選項被選取時，巡查員可即時為該項目建立工作。`}</p>

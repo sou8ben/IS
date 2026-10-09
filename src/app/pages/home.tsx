@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge, Button, Dialog } from "antd-mobile";
 import { AddCircleOutline, BellOutline, CompassOutline, ExclamationCircleOutline, FillinOutline, FlagOutline, RightOutline, ScanningOutline, TeamOutline, TravelOutline } from "antd-mobile-icons";
 import { Card, Empty, NfcPopup, Progress, StatusTag } from "../components";
-import { isMyWork, nowText, shortTime, slaInfo, visiblePlans } from "../rules";
+import { isMyWork, nowText, planStats, shortTime, slaInfo, visiblePlans } from "../rules";
 import { useApp } from "../store";
 
 export function HomePage() {
@@ -40,7 +40,7 @@ export function HomePage() {
       <div className="m-home-date">2026 年 9 月 29 日 星期二 · 澳門時間 {nowText().slice(11)}{state.companions.length ? ` · 同行 ${state.companions.length} 人` : ""}</div>
       <div className="m-stats">{stats.map((item) => <button key={item.label} onClick={() => navigate(item.path)}><strong>{item.value}</strong><span>{item.label}</span></button>)}</div>
       {active.length > 0 && <Card className="m-active-card" title="進行中計劃" extra={<StatusTag>進行中</StatusTag>}>
-        {active.map((plan) => <div key={plan.id} className="m-active-plan"><div><strong>{plan.name}</strong><span>{shortTime(plan.startAt)}–{shortTime(plan.endAt)} · 已巡查 {plan.progress}/{plan.total}</span></div><Progress value={plan.progress} total={plan.total} /></div>)}
+        {active.map((plan) => { const stats = planStats(plan.id, state.inspections, shared.works, shared.events); return <div key={plan.id} className="m-active-plan"><div><strong>{plan.name}</strong><span>{shortTime(plan.startAt)}–{shortTime(plan.endAt)} · 已巡查 {stats.done}/{stats.planned}{stats.onSite ? ` · 現場新增 ${stats.onSite}` : ""}</span></div><Progress value={stats.done} total={stats.planned} /></div>; })}
         <Button block color="primary" onClick={() => navigate(state.mergedPlanIds.length > 1 ? `/plans/merge?ids=${state.mergedPlanIds.join(",")}` : `/plans/${active[0].id}`)}>繼續作業</Button>
       </Card>}
       <Card title="常用功能"><div className="m-shortcuts">{shortcuts.map((item) => <button key={item.label} onClick={item.onClick}><span className={`m-shortcut-icon ${item.tone}`}>{item.icon}</span>{item.label}</button>)}</div></Card>

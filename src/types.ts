@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { EventChange, EventFieldDef } from "./event-rules";
 import type { GridRecord } from "./grid-rules";
 import type { InspectionTemplate as BackOfficeTemplate } from "./inspection-templates";
+import type { PlanTemplate } from "./plan-templates";
 import type { InspectionTypeRecord } from "./inspection-type-rules";
 import type { ItemTypeRecord, ManagedItem } from "./item-rules";
 import type { ManagedObject } from "./object-rules";
@@ -49,6 +50,7 @@ export interface Work {
 export interface Plan {
   id: string;
   name: string;
+  /** Name of the plan's 巡查計劃模板 as at creation. */
   template: string;
   group: string;
   status: "未開始" | "進行中" | "已中止" | "已完成";
@@ -61,12 +63,12 @@ export interface Plan {
   department?: string;
   objectIds?: string[];
   note?: string;
-  /** The 巡查計劃模板 the plan uses (`template` holds its name as at creation). */
+  /** The single 巡查模板 of a plan made straight from one 巡查模板, before 巡查計劃模板 existed (seed plans keep it). */
   templateId?: string;
-  /** Retired: the plan template of plans created before 巡查計劃模板 drove plans. */
+  /** The 巡查計劃模板 the plan was generated from. */
   planTemplateId?: string;
   groupId?: string;
-  /** 巡查計劃模板 and chosen objects as at creation, with the template items; later template edits never change the plan. */
+  /** 巡查計劃模板 (route, objects, 巡查模板 and their items) as at creation; later template edits never change the plan. */
   snapshot?: PlanSnapshot<TemplateItem>;
   /** Inspections generated or added in the back office; the App materialises the non-補入 entries. */
   inspections?: PlannedInspection[];
@@ -124,6 +126,8 @@ export interface DemoState {
   objects: ManagedObject[];
   /** Back-office inspection templates (shared so object detail can show related ones). */
   inspectionTemplates: BackOfficeTemplate[];
+  /** 巡查計劃模板: route, objects and their 巡查模板; plans are generated from them. */
+  planTemplates: PlanTemplate[];
   /** Managed inspection types: the top-level classification of objects, items and templates. */
   inspectionTypes: InspectionTypeRecord[];
   /** 巡查項目類型 and 巡查項目: the App inspection forms, templates and work summaries read them. */

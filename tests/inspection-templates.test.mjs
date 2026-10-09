@@ -16,14 +16,14 @@ test("all seed templates are valid", () => {
 });
 test("blank draft reports required fields and points at the right tabs", () => {
   const errors = validateTemplate(newTemplate(), initialTemplates, groups);
-  for (const text of ["巡查計劃模板編號", "巡查計劃模板名稱", "巡查類型", "巡查項目"]) assert.ok(errors.some((error) => error.message.includes(text)), text);
+  for (const text of ["模板編號", "模板名稱", "巡查類型", "巡查項目"]) assert.ok(errors.some((error) => error.message.includes(text)), text);
   assert.ok(errors.some((error) => error.tab === "items"));
 });
 test("code is unique; name is unique within a type only", () => {
   assert.ok(has(tpl({ code: "tpl001" }), "已存在"));
-  assert.ok(has(tpl({ name: "公園設施標準巡查表" }), "同名巡查計劃模板"));
+  assert.ok(has(tpl({ name: "公園設施標準巡查表" }), "同名模板"));
   const street = initialTemplates[1];
-  assert.equal(has({ ...structuredClone(street), id: "", code: "TPL098", name: "公園設施標準巡查表" }, "同名巡查計劃模板"), false);
+  assert.equal(has({ ...structuredClone(street), id: "", code: "TPL098", name: "公園設施標準巡查表" }, "同名模板"), false);
 });
 test("distance and check points are required only with location check", () => {
   assert.ok(has(tpl({ validDistance: 5 }), "有效距離"));

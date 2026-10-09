@@ -2,6 +2,7 @@ import { seedGrids } from "./grid-rules";
 import { initialTemplates } from "./inspection-templates";
 import { seedTypes } from "./inspection-type-rules";
 import { seedObjects } from "./object-data";
+import { seedPlanTemplates } from "./plan-template-data";
 import { seedItems, seedItemTypes } from "./item-data";
 import { seedHistoryRecords } from "./history-seed";
 import { groupCatalog } from "./group-catalog";
@@ -17,11 +18,11 @@ export const initialState: DemoState = {
     { id: "WK-20260927-0064", title: "指示牌字樣褪色", type: "公共設施／標示", source: "接口", priority: "一般", status: "新建", group: "待人工分派", grid: "路環東區", address: "黑沙海灘巴士站旁", sla: "已逾時", createdAt: "2026-09-27 16:20", updatedAt: "2026-09-27 16:20", description: "由市容平台轉入，需確認權責單位。" },
   ],
   plans: [
-    { id: "PL-20260929-0003", name: "黑沙環公園設施日常巡查", template: "公園設施標準巡查表", templateId: "TPL001", group: "北區巡查一組", status: "進行中", startAt: "2026-09-29 08:30", endAt: "2026-09-29 12:30", progress: 7, total: 12, executor: "陳家朗", grid: "花地瑪堂北區" },
-    { id: "PL-20260929-0005", name: "黑沙環海濱休憩區巡查", template: "海濱設施巡查表", templateId: "TPL004", group: "北區巡查一組", status: "未開始", startAt: "2026-09-29 15:00", endAt: "2026-09-29 17:00", progress: 0, total: 5, grid: "花地瑪堂北區" },
-    { id: "PL-20260929-0006", name: "筷子基街道設施巡查", template: "街道環境標準巡查表", templateId: "TPL002", group: "北區巡查一組", status: "未開始", startAt: "2026-09-29 16:00", endAt: "2026-09-29 18:00", progress: 0, total: 4, grid: "花地瑪堂西區" },
-    { id: "PL-20260929-0004", name: "中區街道環境巡查", template: "街道環境標準巡查表", templateId: "TPL002", group: "中區巡查組", status: "未開始", startAt: "2026-09-29 14:00", endAt: "2026-09-29 18:00", progress: 0, total: 18, grid: "大堂中區" },
-    { id: "PL-20260928-0018", name: "氹仔公園設施巡查", template: "公園設施標準巡查表", templateId: "TPL001", group: "離島巡查組", status: "已完成", startAt: "2026-09-28 09:00", endAt: "2026-09-28 13:00", progress: 15, total: 15, executor: "李芷晴", grid: "氹仔中央區" },
+    { id: "PL-20260929-0003", name: "黑沙環公園設施日常巡查", template: "黑沙環公園日常巡查路線", templateId: "TPL001", planTemplateId: "PLT001", group: "北區巡查一組", status: "進行中", startAt: "2026-09-29 08:30", endAt: "2026-09-29 12:30", progress: 7, total: 12, executor: "陳家朗", grid: "花地瑪堂北區" },
+    { id: "PL-20260929-0005", name: "黑沙環海濱休憩區巡查", template: "黑沙環海濱休憩區巡查路線", templateId: "TPL004", planTemplateId: "PLT002", group: "北區巡查一組", status: "未開始", startAt: "2026-09-29 15:00", endAt: "2026-09-29 17:00", progress: 0, total: 5, grid: "花地瑪堂北區" },
+    { id: "PL-20260929-0006", name: "筷子基街道設施巡查", template: "筷子基街道設施巡查路線", templateId: "TPL002", planTemplateId: "PLT003", group: "北區巡查一組", status: "未開始", startAt: "2026-09-29 16:00", endAt: "2026-09-29 18:00", progress: 0, total: 4, grid: "花地瑪堂西區" },
+    { id: "PL-20260929-0004", name: "中區街道環境巡查", template: "中區街道環境巡查路線", templateId: "TPL002", planTemplateId: "PLT004", group: "中區巡查組", status: "未開始", startAt: "2026-09-29 14:00", endAt: "2026-09-29 18:00", progress: 0, total: 18, grid: "大堂中區" },
+    { id: "PL-20260928-0018", name: "氹仔公園設施巡查", template: "氹仔公園設施巡查路線", templateId: "TPL001", planTemplateId: "PLT005", group: "離島巡查組", status: "已完成", startAt: "2026-09-28 09:00", endAt: "2026-09-28 13:00", progress: 15, total: 15, executor: "李芷晴", grid: "氹仔中央區" },
     { id: "PL-20260927-0012", name: "路環步道巡查", template: "街道環境標準巡查表", templateId: "TPL002", group: "離島巡查組", status: "已中止", startAt: "2026-09-27 08:00", endAt: "2026-09-27 12:00", progress: 3, total: 9, grid: "路環東區" },
   ],
   events: [
@@ -35,6 +36,7 @@ export const initialState: DemoState = {
   grids: seedGrids(),
   objects: seedObjects(),
   inspectionTemplates: structuredClone(initialTemplates),
+  planTemplates: seedPlanTemplates(),
   inspectionTypes: seedTypes(),
   itemTypes: seedItemTypes(),
   items: seedItems(),
